@@ -1,0 +1,5 @@
+commit 4b9ff89770804f981385c79bcb6058baf3a743eb
+Author: Jingxuan He <he4444mingtian@gmail.com>
+Date:   Thu Apr 19 13:27:00 2018 +0200
+
+    modify get_ordered_segments
