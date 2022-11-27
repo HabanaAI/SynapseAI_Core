@@ -6,8 +6,8 @@
  */
 #include "sparse_lengths_sum_bf16.hpp"
 
-extern unsigned char _binary___sparse_lengths_sum_bf16_2D_f32_embed_o_start;
-extern unsigned char _binary___sparse_lengths_sum_bf16_2D_f32_embed_o_end;
+extern unsigned char _kernels_gaudi_binary___sparse_lengths_sum_bf16_2D_f32_embed_o_start;
+extern unsigned char _kernels_gaudi_binary___sparse_lengths_sum_bf16_2D_f32_embed_o_end;
 
 gcapi::GlueCodeReturn_t SparseLengthsSumBF16::GetKernelName(
         char kernelName [gcapi::MAX_NODE_NAME])
@@ -145,7 +145,7 @@ gcapi::GlueCodeReturn_t SparseLengthsSumBF16::GetGcDefinitions(
     /*************************************************************************************
     *    Stage V -  Load ISA into the descriptor.
     **************************************************************************************/
-    unsigned IsaSize = (&_binary___sparse_lengths_sum_bf16_2D_f32_embed_o_end - &_binary___sparse_lengths_sum_bf16_2D_f32_embed_o_start);
+    unsigned IsaSize = (&_kernels_gaudi_binary___sparse_lengths_sum_bf16_2D_f32_embed_o_end - &_kernels_gaudi_binary___sparse_lengths_sum_bf16_2D_f32_embed_o_start);
     unsigned givenBinarySize = kernel->elfSize;
     kernel->elfSize = IsaSize;
 
@@ -153,7 +153,7 @@ gcapi::GlueCodeReturn_t SparseLengthsSumBF16::GetGcDefinitions(
     {
         // copy binary out
         memcpy (kernel->kernelElf ,
-                &_binary___sparse_lengths_sum_bf16_2D_f32_embed_o_start,
+                &_kernels_gaudi_binary___sparse_lengths_sum_bf16_2D_f32_embed_o_start,
                 IsaSize);
     }
     else

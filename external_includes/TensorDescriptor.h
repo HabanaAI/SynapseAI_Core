@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include "synapse_common_types.h"
 #include <stdint.h>
 #include <cassert>
 
@@ -42,7 +43,7 @@ DEF_PACK(
 
 typedef struct _TensorDescriptorBase  TensorDescriptorBase;
 
-struct TensorDescriptorGaudi : public TensorDescriptorBase
+struct TensorDescriptor : public TensorDescriptorBase
 {
 	/* for Gaudi:
 	TENSOR_0_BASE_ADDR_LOW		+0x00	32	0		Read/Write	bits 31 to 0 of the base address		no	no	no
@@ -84,19 +85,39 @@ typedef enum TensorDataType_
 uint32_t gen2_TensorDescriptorElementSizeType(uint32_t configuration);
 uint32_t gen2_TensorDescriptorValidDimMask(uint32_t configuration);
 uint32_t gen2_TensorDescriptorLastDim(uint32_t configuration);
+uint32_t gen6_TensorDescriptorElementSizeType(uint32_t configuration);
+uint32_t gen6_TensorDescriptorValidDimMask(uint32_t configuration);
+uint32_t gen6_TensorDescriptorLastDim(uint32_t configuration);
 
 namespace tpc_gaudi {
     inline uint32_t get_TensorDescriptorLastDim(uint32_t configuration)
     {
         return gen2_TensorDescriptorLastDim(configuration);
     }
-    inline uint32_t get_TensorDescriptorElementSizeType(uint32_t configuration) 
-    { 
-        return gen2_TensorDescriptorElementSizeType(configuration); 
+    inline uint32_t get_TensorDescriptorElementSizeType(uint32_t configuration)
+    {
+        return gen2_TensorDescriptorElementSizeType(configuration);
     }
     inline uint32_t get_TensorDescriptorValidDimMask(uint32_t configuration)
-    { 
+    {
         return gen2_TensorDescriptorValidDimMask(configuration);
+    }
+	uint32_t TensorDescriptorConfiguration(uint32_t dataType, uint32_t validDimMask, uint32_t lastDim,  uint32_t rmwSel, uint32_t rmwOp);
+    uint32_t get_ElementSizeInBytesFromDataType(TensorDataType DataType);
+}
+
+namespace tpc_gaudi2 {
+    inline uint32_t get_TensorDescriptorLastDim(uint32_t configuration)
+    {
+        return gen6_TensorDescriptorLastDim(configuration);
+    }
+    inline uint32_t get_TensorDescriptorElementSizeType(uint32_t configuration)
+    {
+        return gen6_TensorDescriptorElementSizeType(configuration);
+    }
+    inline uint32_t get_TensorDescriptorValidDimMask(uint32_t configuration)
+    {
+        return gen6_TensorDescriptorValidDimMask(configuration);
     }
 	uint32_t TensorDescriptorConfiguration(uint32_t dataType, uint32_t validDimMask, uint32_t lastDim,  uint32_t rmwSel, uint32_t rmwOp);
     uint32_t get_ElementSizeInBytesFromDataType(TensorDataType DataType);

@@ -10,6 +10,7 @@
 #include <iostream>
 #include "kernel_db.h"
 #include "gc_interface.h"
+#include "recipe.h"
 
 using namespace gcapi;
 
@@ -37,9 +38,10 @@ void KernelDB::clear()
     }
     m_libEntry = nullptr;
     m_loadedKernels.clear();
+    m_initalized = false;
 }
 
-void KernelDB::init()
+void KernelDB::init(synDeviceType deviceType)
 {
     std::lock_guard<std::recursive_mutex> l(m_mutex);
     if (m_libHandle != nullptr) return;
@@ -61,7 +63,7 @@ void KernelDB::init()
 
     gcapi::GlueCodeReturn_t ret;
     unsigned kernelCount = 0;
-    ret = nameFunc(nullptr, &kernelCount, gcapi::DEVICE_ID_GAUDI);
+    ret = nameFunc(nullptr, &kernelCount, deviceIdfromDeviceType(deviceType));
     if (ret != gcapi::GLUE_SUCCESS)
     {
         return;
@@ -75,7 +77,7 @@ void KernelDB::init()
         kernelNames[kernel] = new char[gcapi::MAX_NODE_NAME];
     }
 
-    ret = nameFunc(kernelNames, &kernelCount, gcapi::DEVICE_ID_GAUDI);
+    ret = nameFunc(kernelNames, &kernelCount, deviceIdfromDeviceType(deviceType));
     if (ret != gcapi::GLUE_SUCCESS)
     {
         for (unsigned i = 0; i < kernelCount; i++)
@@ -92,6 +94,7 @@ void KernelDB::init()
         delete[] kernelNames[i];
     }
     delete[] kernelNames;
+    m_initalized = true;
 }
 
 bool KernelDB::isKernelExist(const std::string &guid) const
@@ -112,4 +115,8 @@ GlueCodeReturn_t KernelDB::GetKernelInstantiation(HabanaKernelParams_t* params,
     if (!isKernelExist(kernelName)) return gcapi::GLUE_FAILED;
 
     return m_libEntry(params, instance);
+}
+bool KernelDB::initialized() {
+  std::lock_guard<std::recursive_mutex> l(m_mutex);
+  return m_initalized;
 }

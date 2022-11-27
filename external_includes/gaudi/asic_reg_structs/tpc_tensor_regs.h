@@ -9,7 +9,8 @@
 #include <stdint.h>
 
 #pragma pack(push, 1)
-
+namespace gaudi
+{
 namespace tpc_tensor {
 /*
  BASE_ADDR_LOW 
@@ -222,12 +223,16 @@ struct block_tpc_tensor {
 	struct tpc_tensor::reg_dim_4_size dim_4_size;
 	struct tpc_tensor::reg_dim_4_stride dim_4_stride;
 };
+} // namespace gaudi
 #include "gaudi_types.h"
+namespace gaudi
+{
 const offsetVal block_tpc_tensor_defaults[]
 {
 	// offset	// value
 	{ 0xc   , 0x50000             , 1 }, // tensor_config
 };
 
+} // namespace gaudi
 #pragma pack(pop)
 #endif /* ASIC_REG_STRUCTS_TPC_TENSOR_H_ */

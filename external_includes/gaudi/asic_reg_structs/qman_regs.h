@@ -9,7 +9,8 @@
 #include <stdint.h>
 
 #pragma pack(push, 1)
-
+namespace gaudi
+{
 namespace qman {
 /*
  GLBL_CFG0 
@@ -1954,7 +1955,10 @@ struct block_qman {
 	uint32_t _pad3292[9];
 	struct qman::reg_glbl_mem_init_busy glbl_mem_init_busy;
 };
+} // namespace gaudi
 #include "gaudi_types.h"
+namespace gaudi
+{
 const offsetVal block_qman_defaults[]
 {
 	// offset	// value
@@ -1986,5 +1990,6 @@ const offsetVal block_qman_defaults[]
 	{ 0xc84 , 0x2000              , 1 }, // local_range_size
 };
 
+} //namespace gaudi
 #pragma pack(pop)
 #endif /* ASIC_REG_STRUCTS_QMAN_H_ */

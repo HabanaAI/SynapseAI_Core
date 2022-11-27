@@ -48,10 +48,10 @@ void main(tensor ifm,
                                                0};
                             bfloat128 filterVector = v_bf16_ld_tnsr_b(filterCoords, filter);
                             bfloat128 ifmVector = v_bf16_ld_tnsr_b(ifmCoords, ifm);
-                            accum = v_bf16_mac_acc32_b(filterVector, ifmVector, accum, (e_no_negation) << 1);
+                            accum = v_bf16_mac_acc32_b(filterVector, ifmVector, accum, e_no_negation << 1);
                         }
                     }
-                    bfloat128 out = v_convert_f32_to_bf16_all_b (accum);
+                    bfloat128 out = v_convert_f32_to_bf16_all_b(accum);
                     v_bf16_st_tnsr(output_coords, ofm, out);
                 }
             }

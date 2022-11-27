@@ -7,9 +7,16 @@
 #include <cstring>
 #include "customdiv_fwd_f32.hpp"
 
+#define CUSTOM_DIV_START _kernels_gaudi_binary___customdiv_fwd_f32_o_start
+#define CUSTOM_DIV_END _kernels_gaudi_binary___customdiv_fwd_f32_o_end
 
-extern unsigned char _binary___customdiv_fwd_f32_o_start;
-extern unsigned char _binary___customdiv_fwd_f32_o_end;
+extern unsigned char CUSTOM_DIV_START;
+extern unsigned char CUSTOM_DIV_END;
+
+extern unsigned char _kernels_gaudi2_binary___customdiv_fwd_f32_o_start;
+extern unsigned char _kernels_gaudi2_binary___customdiv_fwd_f32_o_end;
+
+
 
 gcapi::GlueCodeReturn_t CustomdivFwdF32::GetKernelName(
         char kernelName [gcapi::MAX_NODE_NAME])
@@ -138,15 +145,35 @@ gcapi::GlueCodeReturn_t CustomdivFwdF32::GetGcDefinitions(
     /*************************************************************************************
     *    Stage V -  Load ISA into the descriptor.
     **************************************************************************************/
-    unsigned IsaSize = (&_binary___customdiv_fwd_f32_o_end - &_binary___customdiv_fwd_f32_o_start);
+
+    unsigned char* pStart = nullptr;
+    unsigned char* pEnd = nullptr;
+
+    switch(params->deviceId)
+    {
+        case gcapi::DEVICE_ID_GAUDI:
+        {
+            pStart = &CUSTOM_DIV_START;
+            pEnd = &CUSTOM_DIV_END;
+            break;
+        }
+        case gcapi::DEVICE_ID_GAUDI2:
+        {
+            pStart = &_kernels_gaudi2_binary___customdiv_fwd_f32_o_start;
+            pEnd = &_kernels_gaudi2_binary___customdiv_fwd_f32_o_end;
+            break;            
+        }
+        default:
+            return gcapi::GLUE_FAILED;
+    }
+
+    unsigned IsaSize = (pEnd - pStart);
     unsigned givenBinarySize = kernel->elfSize;
     kernel->elfSize = IsaSize;
 
     if (givenBinarySize >= IsaSize)
     {
-        memcpy (kernel->kernelElf ,
-                    &_binary___customdiv_fwd_f32_o_start,
-                    IsaSize);
+        memcpy (kernel->kernelElf, pStart, IsaSize);
     }
     else
     {

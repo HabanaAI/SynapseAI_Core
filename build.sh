@@ -23,8 +23,19 @@ set -e
 # then you need to define EXTRA_CMAKE_FLAGS as:
 # EXTRA_CMAKE_FLAGS=-DDRIVER_INCLUDE_PATH=$HOME/habanalabs/include/uapi
 
+SECONDS=0;
 SRCDIR=`dirname $0`
 BUILDDIR="$SRCDIR/build"
+build_type="Release"
+
+while [ -n "$1" ]; do
+    case $1 in 
+        -debug)
+            build_type="Debug"
+            ;;
+    esac;
+    shift;
+done
 
 if [ -d $BUILDDIR ]; then
 	rm -rf $BUILDDIR
@@ -41,5 +52,8 @@ fi
 
 cd "$BUILDDIR"
 
-$CMAKE -DCMAKE_BUILD_TYPE="Release" ${EXTRA_CMAKE_FLAGS:-} ..
+$CMAKE -DCMAKE_BUILD_TYPE=${build_type} ${EXTRA_CMAKE_FLAGS:-} ..
 make -j8
+
+printf "\nElapsed time: %02u:%02u:%02u \n\n" $(($SECONDS / 3600)) $((($SECONDS / 60) % 60)) $(($SECONDS % 60));
+

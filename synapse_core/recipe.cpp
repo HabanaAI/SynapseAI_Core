@@ -7,13 +7,25 @@
 
 #include <cstring>
 #include <list>
+#include "gaudi/gaudi_device.h"
+#include "gaudi2/gaudi2_device.h"
+#include "hw_abstraction_layer.h"
 #include "recipe.h"
+#include "synapse_common_types.h"
+#include "synapse_state.h"
 #include "tpc_elf_api.hpp"
 
-Recipe::Recipe() : m_params(nullptr), m_paramSize(0), m_numInputs(0), m_numAuxTensors(0), m_firstAux(0), m_auxBuffer(nullptr), m_elfBuffer(nullptr)
+Recipe::Recipe(const synDeviceType deviceType)
 {
-    memset(&m_kernelParams, 0, sizeof(m_kernelParams));
-    memset(&m_kernelInstance, 0, sizeof(m_kernelInstance));
+    switch(deviceType)
+    {
+        case synDeviceGaudi:
+            m_hal = std::make_shared<gaudi::GaudiDevice>();
+        case synDeviceGaudi2:
+            m_hal = std::make_shared<gaudi2::Gaudi2Device>();
+        default:
+            assert(0 && "unsupported device type");
+    }
 }
 
 Recipe::~Recipe()
@@ -47,7 +59,7 @@ void Recipe::Compile(Graph *g, KernelDB* db)
     }
     m_guid = node->GetGUID();
 
-    SetKernelParams();
+    SetKernelParams(g->getDeviceType());
     gcapi::GlueCodeReturn_t ret = db->GetKernelInstantiation(&m_kernelParams, &m_kernelInstance);
     while (ret != gcapi::GLUE_SUCCESS)
     {
@@ -116,7 +128,7 @@ void Recipe::PartitionIndexSpace()
         if (idxSpace.size[i] == 0) idxSpace.size[i] = 1;
     }
 
-    const unsigned nPartitions = 8;
+    const unsigned nPartitions = GetHal()->GetTPCNr();
     curPartition.push_back(idxSpace);
     while (curPartition.size() < nPartitions)
     {
@@ -142,17 +154,35 @@ void Recipe::PartitionIndexSpace()
     m_indexSpacePartition.insert(m_indexSpacePartition.end(), curPartition.begin(), curPartition.end());
 }
 
-void Recipe::SetKernelParams()
+gcapi::DeviceId_t deviceIdfromDeviceType(synDeviceType deviceType)
+{
+    switch (deviceType)
+    {
+        case synDeviceGaudi: return gcapi::DEVICE_ID_GAUDI;
+        case synDeviceGaudi2: return gcapi::DEVICE_ID_GAUDI2;
+
+        default:
+        {
+            assert(0);
+            return gcapi::DEVICE_ID_MAX;
+        }
+    }
+
+    assert(0);
+    return gcapi::DEVICE_ID_MAX;
+}
+
+void Recipe::SetKernelParams(synDeviceType deviceType)
 {
     m_kernelParams.NodeParams      = m_params;
     m_kernelParams.NodeParamsSize  = m_paramSize;
     m_kernelParams.kernelType      = gcapi::KERNEL_TYPE_INFERENCE;
-    m_kernelParams.deviceId        = gcapi::DEVICE_ID_GAUDI;
+    m_kernelParams.deviceId        = deviceIdfromDeviceType(deviceType);
     m_kernelParams.apiVersion      = 1;
     m_kernelParams.inputTensorNr   = m_numInputs;
     m_kernelParams.outputTensorNr  = m_tensors.size() - m_numInputs;
     m_kernelParams.debugFlags      = 0;
-    m_kernelParams.maxAvailableTpc = 8;
+    m_kernelParams.maxAvailableTpc = GetHal()->GetTPCNr();
     memcpy(m_kernelParams.nodeName, m_guid.c_str(), std::min(m_guid.size(), (size_t)gcapi::MAX_NODE_NAME));
 
     for (unsigned i = 0; i < m_numInputs; ++i)

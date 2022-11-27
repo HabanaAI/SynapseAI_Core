@@ -6,8 +6,6 @@
  */
 
 #include "runtime.h"
-#include "asic_reg_structs/tpc_regs.h"
-#include "gaudi_device.h"
 #include <gc_interface.h>
 #include "index_space.h"
 #include <iostream>
@@ -80,7 +78,7 @@ void LoadSpecialFuncTab(std::list<Buffer>& inputBuffers, DeviceMemory_t memSpace
 }
 
 unsigned int
-RunKernel(std::vector<TensorDescriptorGaudi>&       descriptors,
+RunKernel(std::vector<TensorDescriptor>&       descriptors,
           const gcapi::HabanaKernelParams_t&        gc_input,
           const gcapi::HabanaKernelInstantiation_t& gc_output,
           bool                                      specialFunctionUsed,
@@ -184,9 +182,6 @@ RunKernel(std::vector<TensorDescriptorGaudi>&       descriptors,
         {
             unsigned j = i % tpcIds.size();
 
-            // generates a unique context ID for each TPC for trace use.
-            uint32_t contextId = (uint32_t)0xab + tpcIds[j];
-
             uint32_t soAddr = (uint32_t)c_syncObjectAddr;
             // if this tpc id receives more then one descriptor - we write 0 to the sync object.
             uint32_t soMsg = 0x80000000;
@@ -196,13 +191,11 @@ RunKernel(std::vector<TensorDescriptorGaudi>&       descriptors,
                 soMsg = 0x80000001;
             }
 
-            uint32_t soIdx = (uint32_t)c_syncObjectIndex;
-
             // Explanation for (i == 0 ? 0 : s_printfIsUsed) :
             // in the first invocation there is no need to update the base address of the printf
             // tensor
             runner.m_device.GetHal()->WriteTpcJobDesc(
-                    mainDesc, partition[i], contextId, soAddr, soMsg, soIdx,
+                    mainDesc, partition[i], soAddr, soMsg,
                     0, 15);
 
             // write TPC descriptor to queue manager.
@@ -229,32 +222,22 @@ RunKernel(std::vector<TensorDescriptorGaudi>&       descriptors,
                                     baseAddrHigh, specialFuncTabAddresses[tabIdx] >> 32));
                 }
             }
-            // set SM_BASE_ADDRESS_HIGH
-            tpcProgram[activeTpcCount * qidx + j].AddCommandsBack(
-                    *runner.m_device.GetHal()->GenWReg32(
-                            runner.m_device.GetHal()->GetTpcCfgVarOffset("sm_base_address_high"),
-                            (runner.m_device.GetHal()->GetSyncManagerBaseAddr() >> 32)));
-
             // Invalidate ICache/DCache/LCache/TCache
-            tpc::reg_tpc_cmd command;
-            memset(&command, 0, sizeof(command));
-            command.icache_invalidate    = 1;
-            command.dcache_invalidate    = 1;
-            command.lcache_invalidate    = 1;
-            command.tcache_invalidate    = 1;
-            command.icache_prefetch_64kb = 0;
+            uint32_t tpc_cmd = runner.m_device.GetHal()->GenTpcCmd();
             bool msgBarrier              = 0;
             bool regBarrier              = 0;
             bool engBarrier              = 1;
             // TPC cmd
-            tpcProgram[activeTpcCount * qidx + j].AddCommandsBack(
-                    *runner.m_device.GetHal()->GenWReg32(
-                            runner.m_device.GetHal()->GetTpcCfgVarOffset("tpc_cmd"), command._raw,
-                            msgBarrier, regBarrier, engBarrier));
+            auto pMsgLong_tpc_cmd = runner.m_device.GetHal()->GenWReg32(
+                            runner.m_device.GetHal()->GetTpcCfgVarOffset("tpc_cmd"), //addr
+                            tpc_cmd, //value
+                            msgBarrier, regBarrier, engBarrier);
+            tpcProgram[activeTpcCount * qidx + j].AddCommandsBack(*pMsgLong_tpc_cmd);
             // TPC execute
-            tpcProgram[activeTpcCount * qidx + j].AddCommandsBack(
-                    *runner.m_device.GetHal()->GenWReg32(
-                            runner.m_device.GetHal()->GetTpcCfgVarOffset("tpc_execute"), 1));
+            auto pMsgLong_tpc_exec = runner.m_device.GetHal()->GenWReg32(
+                                    runner.m_device.GetHal()->GetTpcCfgVarOffset("tpc_execute"), //addr
+                                    1); // value
+            tpcProgram[activeTpcCount * qidx + j].AddCommandsBack(*pMsgLong_tpc_exec);
         }
     }
 

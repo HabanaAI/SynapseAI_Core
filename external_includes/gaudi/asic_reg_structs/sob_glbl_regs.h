@@ -9,7 +9,8 @@
 #include <stdint.h>
 
 #pragma pack(push, 1)
-
+namespace gaudi
+{
 namespace sob_glbl {
 /*
  SM_SEI_MASK 
@@ -50,5 +51,6 @@ struct block_sob_glbl {
 	struct sob_glbl::reg_sm_sei_cause sm_sei_cause;
 };
 
+} // namespace gaudi
 #pragma pack(pop)
 #endif /* ASIC_REG_STRUCTS_SOB_GLBL_H_ */

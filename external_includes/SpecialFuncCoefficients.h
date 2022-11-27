@@ -15,3 +15,10 @@ namespace tpc_gaudi {
 	uint8_t *getLUTStartAddressFromFuncID(uint32_t funcID, uint8_t* baseAddr);
 	uint32_t getCoefAddrFromOffset(uint8_t offset, bool isLOOKUP, uint32_t elementSize);
 }
+
+namespace tpc_gaudi2
+{
+void     buildSpecialFunctionCoefficients(std::vector<std::vector<uint8_t>>& specialFunctionCoefficients);
+uint8_t* getLUTStartAddressFromFuncID(uint32_t funcID, uint8_t* baseAddr);
+uint32_t getCoefAddrFromOffset(uint8_t offset, bool isLOOKUP, uint32_t elementSize);
+} // namespace tpc_gaudi2

@@ -6,8 +6,8 @@
  */
 #include "batch_norm_f32.hpp"
 
-extern unsigned char _binary___batch_norm_fwd_f32_o_start;
-extern unsigned char _binary___batch_norm_fwd_f32_o_end;
+extern unsigned char _kernels_gaudi_binary___batch_norm_fwd_f32_o_start;
+extern unsigned char _kernels_gaudi_binary___batch_norm_fwd_f32_o_end;
 
 gcapi::GlueCodeReturn_t BatchNormF32::GetKernelName(
              char kernelName [gcapi::MAX_NODE_NAME])
@@ -231,7 +231,7 @@ gcapi::GlueCodeReturn_t BatchNormF32::GetGcDefinitions(
     /*************************************************************************************
     *    Stage V -  Load ISA into the descriptor.
     **************************************************************************************/
-    unsigned IsaSize = (&_binary___batch_norm_fwd_f32_o_end - &_binary___batch_norm_fwd_f32_o_start);
+    unsigned IsaSize = (&_kernels_gaudi_binary___batch_norm_fwd_f32_o_end - &_kernels_gaudi_binary___batch_norm_fwd_f32_o_start);
     unsigned givenBinarySize = out_defs->elfSize;
     out_defs->elfSize = IsaSize;
 
@@ -239,7 +239,7 @@ gcapi::GlueCodeReturn_t BatchNormF32::GetGcDefinitions(
     {
         // copy binary out
         memcpy (out_defs->kernelElf ,
-                &_binary___batch_norm_fwd_f32_o_start,
+                &_kernels_gaudi_binary___batch_norm_fwd_f32_o_start,
                 IsaSize);
     }
     else

@@ -14,8 +14,10 @@ MemoryAllocatorBase::MemoryAllocatorBase(const std::string& name)
 {
 }
 
-void MemoryAllocatorBase::Init(uint64_t memorySize, uint64_t base)
+void MemoryAllocatorBase::Init(DriverDevice* device, bool mmuEnabled, uint64_t memorySize, uint64_t base)
 {
     m_memorySize = memorySize;
     m_base       = base;
+    m_device = device;
+    m_mmuEnabled = mmuEnabled;
 }

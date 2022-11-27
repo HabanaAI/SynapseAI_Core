@@ -9,7 +9,8 @@
 #include <stdint.h>
 
 #pragma pack(push, 1)
-
+namespace gaudi
+{
 namespace dma_core {
 /*
  CFG_0 
@@ -1039,6 +1040,6 @@ const offsetVal block_dma_core_defaults[]
 	{ 0x130 , 0x1                 , 1 }, // wr_awuser_31_11
 	{ 0x230 , 0x178               , 1 }, // dbg_sts
 };
-
+} // namespace gaudi
 #pragma pack(pop)
 #endif /* ASIC_REG_STRUCTS_DMA_CORE_H_ */

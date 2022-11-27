@@ -9,7 +9,8 @@
 #include <stdint.h>
 
 #pragma pack(push, 1)
-
+namespace gaudi
+{
 namespace tpc_non_tensor_descriptor {
 /*
  KERNEL_BASE_ADDRESS_LOW 
@@ -222,12 +223,16 @@ struct block_tpc_non_tensor_descriptor {
 	struct tpc_non_tensor_descriptor::reg_kernel_id kernel_id;
 	struct tpc_non_tensor_descriptor::reg_srf srf[32];
 };
+} // namespace gaudi
 #include "gaudi_types.h"
+namespace gaudi
+{
 const offsetVal block_tpc_non_tensor_descriptor_defaults[]
 {
 	// offset	// value
 	{ 0x30  , 0x60882             , 1 }, // kernel_config
 };
 
+} //namespace gaudi
 #pragma pack(pop)
 #endif /* ASIC_REG_STRUCTS_TPC_NON_TENSOR_DESCRIPTOR_H_ */

@@ -1,4 +1,13 @@
-build
+*.so
+*.cmake
+Makefile
+CMakeFiles
+CMakeCache.txt
+tests/*_test
+build/
 .cproject
 .project
-.settings
+.settings/
+.vscode/
+.gdbinit
+.cache

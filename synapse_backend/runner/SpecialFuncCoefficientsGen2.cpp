@@ -8,7 +8,7 @@
 #include <cassert>
 #include <cstring>
 #include "SpecialFuncCoefficients.h"
-#include "SpecialFuncCoefficients_defGen2.h"
+#include "gaudi/SpecialFuncCoefficients_defGen2.h"
 using namespace std;
 
 namespace tpc_gaudi {

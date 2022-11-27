@@ -105,6 +105,7 @@ typedef enum synMemFlags
 typedef enum synDeviceType
 {
     synDeviceGaudi,
+    synDeviceGaudi2,
     synDeviceTypeInvalid,
     synDeviceTypeSize
 } synDeviceType;

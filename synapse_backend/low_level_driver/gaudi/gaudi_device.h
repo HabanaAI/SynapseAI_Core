@@ -8,15 +8,18 @@
 #pragma once
 
 #include "hw_abstraction_layer.h"
-
+#include "synapse_common_types.h"
+namespace gaudi
+{
 class GaudiDevice : public HWAbstractionLayer
 {
 public:
     GaudiDevice() {}
     virtual ~GaudiDevice() {}
 
-    virtual unsigned    GetTensorSizeFromDesc(TensorDescriptorGaudi& desc) const override;
-    virtual unsigned    GetTensorSizeFromDesc(TensorDescriptorGaudi& desc0, TensorDescriptorGaudi& desc1) const override;
+    virtual synDeviceType getDeviceType() const override {return synDeviceGaudi;}
+    virtual unsigned    GetTensorSizeFromDesc(TensorDescriptor& desc) const override;
+    virtual unsigned    GetTensorSizeFromDesc(TensorDescriptor& desc0, TensorDescriptor& desc1) const override;
 
     virtual unsigned    GetSpecialFuncTabNr() const override;
     virtual void        GetSpecialFuncTabSizes(uint32_t* sizes, unsigned sizesLen) const override;
@@ -42,7 +45,7 @@ public:
     virtual uint64_t    GetSyncMngrVarAddr(std::string varName, unsigned idx) const override;
     virtual unsigned    GetDmaDownVarOffset(std::string varName) const override;
     virtual unsigned    GetTpcCfgVarOffset(std::string varName) const override;
-    virtual unsigned    GetMonArmRawVal(unsigned mask, unsigned sid, unsigned sod, unsigned sop) const override;
+    virtual unsigned    GetMonArmRawVal(uint8_t mask, uint8_t sid, unsigned sod, unsigned sop) const override;
     virtual void        GetTpcTabOffset(int TabIdx, uint32_t* baseAddrLow, uint32_t* baseAddrHigh) const override;
 
     virtual std::shared_ptr<CPCommand::WReg32>              GenWReg32(uint16_t offset, uint32_t value, bool mb = false, bool rb = false, bool eb = false) const override;
@@ -56,8 +59,13 @@ public:
     virtual void        WriteSrf(TpcDescHandle tpcDesc, const uint32_t* params, unsigned paramsNr) const override;
     virtual void        WriteKernelCfg(TpcDescHandle tpcDesc, uint32_t smallVlm) const override;
     virtual void        WriteKernelAddr(TpcDescHandle tpcDesc, uint64_t kernelAddr) const override;
-    virtual void        WriteTensorDesc(TpcDescHandle tpcDesc, TensorDescriptorGaudi& tensorDesc, unsigned tensorId) const override;
-    virtual void        WriteTpcJobDesc(TpcDescHandle tpcDesc, const IndexSpace& partition, uint32_t contextId, uint32_t soAddr, uint32_t soMsg, uint32_t soIdx, bool updatePrintfAddr, int printfTensorIdx) const override;
+    virtual void        WriteTensorDesc(TpcDescHandle tpcDesc, TensorDescriptor& tensorDesc, unsigned tensorId) const override;
+    virtual void        WriteTpcJobDesc(TpcDescHandle tpcDesc, const IndexSpace& partition, uint32_t soAddr, uint32_t soMsg, bool updatePrintfAddr, int printfTensorIdx) const override;
+    virtual uint32_t    GenTpcCmd() const override;
+    virtual uint32_t    GetTpcTensorConfig() const override;
+
+    virtual bool isMmuEnabled() const override {return false;}
+    virtual bool shouldConfigureMonCfg() const override {return false;}
 
 private:
     GaudiDevice(const GaudiDevice& other) = delete;
@@ -74,3 +82,5 @@ private:
     static const uint64_t   c_syncObjectsBaseAddr;
     static constexpr uint64_t GetSyncObjectAddress(int synObjIndex);
 };
+
+} // namespace gaudi

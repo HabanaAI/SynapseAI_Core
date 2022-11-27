@@ -8,17 +8,21 @@
 #include <stddef.h>
 #include <misc/habanalabs.h>
 
+#include "TensorDescriptor.h"
 #include "gaudi_device.h"
 #include "SpecialFuncCoefficients.h"
-#include "SpecialFuncCoefficients_defGen2.h"
-#include "asic_reg_structs/sync_mngr_regs.h"
-#include "asic_reg_structs/qman_regs.h"
-#include "asic_reg_structs/dma_core_regs.h"
-#include "asic_reg_structs/tpc_regs.h"
+#include "gaudi/SpecialFuncCoefficients_defGen2.h"
+#include "gaudi/asic_reg_structs/sync_mngr_regs.h"
+#include "gaudi/asic_reg_structs/qman_regs.h"
+#include "gaudi/asic_reg_structs/dma_core_regs.h"
+#include "gaudi/asic_reg_structs/tpc_regs.h"
 #include "gaudi_packet_gen.h"
-#include "asic_reg/gaudi_blocks.h"
-#include "gaudi_tpc_descriptor.h"
+#include "gaudi/asic_reg/gaudi_blocks.h"
+#include "gaudi/gaudi_tpc_descriptor.h"
+#include "synapse_common_types.h"
 
+namespace gaudi
+{
 const unsigned GaudiDevice::c_tpcNr               = 8;
 const unsigned GaudiDevice::c_syncObjNr           = 2048;
 const unsigned GaudiDevice::c_monitorObjNr        = 512;
@@ -31,7 +35,7 @@ constexpr uint64_t GaudiDevice::GetSyncObjectAddress(int synObjIndex)
     return c_syncObjectsBaseAddr + (c_syncObjectSizeInBytes * synObjIndex);
 }
 
-unsigned GaudiDevice::GetTensorSizeFromDesc(TensorDescriptorGaudi& desc) const
+unsigned GaudiDevice::GetTensorSizeFromDesc(TensorDescriptor& desc) const
 {
     unsigned              size      = 1;
     unsigned dims = tpc_gaudi::get_TensorDescriptorLastDim(desc.configuration) + 1;
@@ -47,7 +51,7 @@ unsigned GaudiDevice::GetTensorSizeFromDesc(TensorDescriptorGaudi& desc) const
     return size;
 }
 
-unsigned GaudiDevice::GetTensorSizeFromDesc(TensorDescriptorGaudi& desc0, TensorDescriptorGaudi& desc1) const
+unsigned GaudiDevice::GetTensorSizeFromDesc(TensorDescriptor& desc0, TensorDescriptor& desc1) const
 {
     unsigned              size      = 1;
     unsigned dims0 = tpc_gaudi::get_TensorDescriptorLastDim(desc0.configuration) + 1;
@@ -89,7 +93,7 @@ void GaudiDevice::CopySpecialFuncTab(
     std::vector<std::vector<uint8_t>>& specialFunctionCoefficients) const
 {
     specialFunctionCoefficients.resize(SPECIAL_FUNC_NUM_OF_DIFFERENT_INTERVALS);
-    tpc_gaudi::buildSpecialFunctionCoefficients(specialFunctionCoefficients);
+    ::tpc_gaudi::buildSpecialFunctionCoefficients(specialFunctionCoefficients);
 }
 
 int GaudiDevice::GetDmaUpSyncObjectIndex() const
@@ -511,7 +515,7 @@ unsigned GaudiDevice::GetTpcCfgVarOffset(std::string varName) const
     return offset;
 }
 
-unsigned GaudiDevice::GetMonArmRawVal(unsigned mask, unsigned sid, unsigned sod, unsigned sop) const
+unsigned GaudiDevice::GetMonArmRawVal(uint8_t mask, uint8_t sid, unsigned sod, unsigned sop) const
 {
     sob_objs::reg_mon_arm monArm;
     memset(&monArm, 0, sizeof(sob_objs::reg_mon_arm));
@@ -523,52 +527,52 @@ unsigned GaudiDevice::GetMonArmRawVal(unsigned mask, unsigned sid, unsigned sod,
     return monArm._raw;
 }
 
-std::shared_ptr<CPCommand::CpDma> GaudiDevice::GenCpDma(uint64_t src, uint32_t size) const
+std::shared_ptr<::CPCommand::CpDma> GaudiDevice::GenCpDma(uint64_t src, uint32_t size) const
 {
-    std::shared_ptr<CPCommand::CpDma> pCommand;
+    std::shared_ptr<::CPCommand::CpDma> pCommand;
     pCommand = std::make_shared<CPCommand::CpDmaGen2>(src, size);
     return pCommand;
 }
 
-std::shared_ptr<CPCommand::Fence> GaudiDevice::GenFence(unsigned id, uint8_t targetVal,
+std::shared_ptr<::CPCommand::Fence> GaudiDevice::GenFence(unsigned id, uint8_t targetVal,
                                                         unsigned decVal) const
 {
-    std::shared_ptr<CPCommand::Fence> pCommand;
+    std::shared_ptr<::CPCommand::Fence> pCommand;
     pCommand = std::make_shared<CPCommand::FenceGen2>(id, targetVal, decVal);
     return pCommand;
 }
 
-std::shared_ptr<CPCommand::LinDma> GaudiDevice::GenLinDma(uint64_t dst, uint64_t src,
+std::shared_ptr<::CPCommand::LinDma> GaudiDevice::GenLinDma(uint64_t dst, uint64_t src,
                                                           uint32_t tsize, unsigned dmaDir,
                                                           uint16_t ctxId, bool wrComp) const
 {
     // dmaDir not required for Gaudi, only for Goya
-    std::shared_ptr<CPCommand::LinDma> pCommand;
+    std::shared_ptr<::CPCommand::LinDma> pCommand;
     pCommand          = std::make_shared<CPCommand::LinDmaGen2>(dst, src, tsize, 0, wrComp);
     pCommand->m_ctxId = ctxId;
     return pCommand;
 }
 
-std::shared_ptr<CPCommand::MsgLong> GaudiDevice::GenMsgLong(uint64_t addr, uint32_t value, bool mb,
+std::shared_ptr<::CPCommand::MsgLong> GaudiDevice::GenMsgLong(uint64_t addr, uint32_t value, bool mb,
                                                             bool rb, bool eb) const
 {
-    std::shared_ptr<CPCommand::MsgLong> pCommand;
+    std::shared_ptr<::CPCommand::MsgLong> pCommand;
     pCommand = std::make_shared<CPCommand::MsgLongGen2>(addr, value, mb, rb, eb);
     return pCommand;
 }
 
-std::shared_ptr<CPCommand::WReg32> GaudiDevice::GenWReg32(uint16_t offset, uint32_t value, bool mb,
+std::shared_ptr<::CPCommand::WReg32> GaudiDevice::GenWReg32(uint16_t offset, uint32_t value, bool mb,
                                                           bool rb, bool eb) const
 {
-    std::shared_ptr<CPCommand::WReg32> pCommand;
+    std::shared_ptr<::CPCommand::WReg32> pCommand;
     pCommand = std::make_shared<CPCommand::WReg32Gen2>(offset, value, mb, rb, eb);
     return pCommand;
 }
 
-std::shared_ptr<CPCommand::WRegBulk> GaudiDevice::GenWRegBulk(uint16_t offset, uint32_t* values,
+std::shared_ptr<::CPCommand::WRegBulk> GaudiDevice::GenWRegBulk(uint16_t offset, uint32_t* values,
                                                               unsigned numValues) const
 {
-    std::shared_ptr<CPCommand::WRegBulk> pCommand;
+    std::shared_ptr<::CPCommand::WRegBulk> pCommand;
     pCommand = std::make_shared<CPCommand::WRegBulkGen2>(offset, values, numValues);
     return pCommand;
 }
@@ -601,18 +605,17 @@ void GaudiDevice::WriteKernelAddr(HWAbstractionLayer::TpcDescHandle tpcDesc,
 }
 
 void GaudiDevice::WriteTensorDesc(HWAbstractionLayer::TpcDescHandle tpcDesc,
-                                  TensorDescriptorGaudi& tensorDesc, unsigned tensorId) const
+                                  TensorDescriptor& tensorDesc, unsigned tensorId) const
 {
     memcpy(&(((GaudiTpcDesc*)(tpcDesc))->m_tensors[tensorId]), &tensorDesc,
-           sizeof(TensorDescriptorGaudi));
+           sizeof(TensorDescriptor));
 }
 
 void GaudiDevice::WriteTpcJobDesc(HWAbstractionLayer::TpcDescHandle tpcDesc,
-                                  const IndexSpace& partition, uint32_t contextId, uint32_t soAddr,
-                                  uint32_t soMsg, uint32_t soIdx, bool updatePrintfAddr,
+                                  const IndexSpace& partition, uint32_t soAddr,
+                                  uint32_t soMsg, bool updatePrintfAddr,
                                   int printfTensorIdx) const
 {
-    // soIdx not used in Gaudi, only in Goya
     // load IRF0/1
     ((GaudiTpcDesc*)(tpcDesc))->m_desc.tid_size_dim_0.v = partition.size[0];
     ((GaudiTpcDesc*)(tpcDesc))->m_desc.tid_size_dim_1.v = partition.size[1];
@@ -626,10 +629,32 @@ void GaudiDevice::WriteTpcJobDesc(HWAbstractionLayer::TpcDescHandle tpcDesc,
     ((GaudiTpcDesc*)(tpcDesc))->m_desc.tid_base_dim_3.v = partition.offset[3];
     ((GaudiTpcDesc*)(tpcDesc))->m_desc.tid_base_dim_4.v = partition.offset[4];
 
-    // generates a unique context ID for each TPC for trace use.
-    ((GaudiTpcDesc*)(tpcDesc))->m_desc.kernel_id.v = contextId;
-
     ((GaudiTpcDesc*)(tpcDesc))->m_so.addr.v       = soAddr;
     ((GaudiTpcDesc*)(tpcDesc))->m_so.message._raw = soMsg;
 
 }
+
+uint32_t GaudiDevice::GenTpcCmd() const
+{
+    gaudi::tpc::reg_tpc_cmd command;
+    memset(&command, 0, sizeof(command));
+    command.icache_invalidate    = 1;
+    command.dcache_invalidate    = 1;
+    command.lcache_invalidate    = 1;
+    command.tcache_invalidate    = 1;
+    command.icache_prefetch_64kb = 0;
+    return command._raw;
+}
+
+uint32_t GaudiDevice::GetTpcTensorConfig() const
+{
+  struct gaudi::tpc_tensor::reg_tensor_config config;
+  config._raw = 0;
+  config.last_dim = 3;
+  config.valid_dim_mask = 0xF;
+  config.data_type = TensorDataType::TensorDT_FP32;
+  return config._raw;
+
+}
+
+} // namespace gaudi

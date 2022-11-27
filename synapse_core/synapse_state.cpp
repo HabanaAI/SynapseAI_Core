@@ -6,10 +6,12 @@
  */
 
 #include "synapse_state.h"
-#include "asic_reg_structs/tpc_tensor_regs.h"
+#include "gaudi/gaudi_device.h"
+#include "gaudi2/gaudi2_device.h"
+#include "synapse_common_types.h"
 
 unsigned int
-RunKernel(std::vector<TensorDescriptorGaudi>&       descriptors,
+RunKernel(std::vector<TensorDescriptor>&       descriptors,
           const gcapi::HabanaKernelParams_t&        gc_input,
           const gcapi::HabanaKernelInstantiation_t& gc_output,
           bool                                      specialFunctionUsed,
@@ -31,11 +33,6 @@ void SynapseState::Init()
     }
 
     Stream::g_streamId = 0;
-
-    m_hal    = new GaudiDevice();
-    m_runner = new Runtime(m_hal);
-
-    m_kernelDB.init();
 
     m_initialized = true;
     m_initMutex.unlock();
@@ -59,24 +56,30 @@ void SynapseState::Destroy()
     m_d2hStream.Init(STREAM_TYPE_MAX);
     m_computeStream.Init(STREAM_TYPE_MAX);
 
-    for (const auto& it : m_mappedAddresses)
+    if (m_runner)
     {
-        m_runner->m_device.UnmapMemory(it.second);
-    }
-    m_mappedAddresses.clear();
-    m_deviceAllocSizes.clear();
-    m_freeDram = 0;
-
-    if (m_runner != nullptr)
-    {
-        if (m_hasDevice)
+        for (const auto& it : m_mappedAddresses)
         {
-            m_runner->m_device.CloseDevice();
+            m_runner->m_device.UnmapMemory(it.second);
         }
+        m_mappedAddresses.clear();
+        m_deviceAllocSizes.clear();
+        m_freeDram = 0;
+
+        if (m_runner != nullptr)
+        {
+            if (m_hasDevice)
+            {
+                m_runner->m_device.CloseDevice();
+            }
+        }
+        delete m_runner;
+        m_runner = nullptr;
     }
-    delete m_runner;
-    m_runner = nullptr;
+
     delete m_hal;
+    m_hal = nullptr;
+
     m_kernelDB.clear();
     m_hasDevice = false;
     m_apiMutex.unlock();
@@ -125,20 +128,62 @@ void SynapseState::DestroyStream(synStreamHandle handle)
     pStream->Init(STREAM_TYPE_MAX);
 }
 
-bool SynapseState::OpenDevice(const char *pciBusID)
+hlthunk_device_name _getHlThunkDevice(synDeviceType deviceType)
+{
+    switch (deviceType)
+    {
+        case synDeviceGaudi:
+            return HLTHUNK_DEVICE_GAUDI;
+        case synDeviceGaudi2:
+            return HLTHUNK_DEVICE_GAUDI2;
+        default:
+            return HLTHUNK_DEVICE_INVALID;
+    }
+
+    // Cannot reach here
+    return HLTHUNK_DEVICE_INVALID;
+}
+
+bool SynapseState::OpenDevice(const char *pciBusID, const synDeviceType deviceType)
 {
     if (!m_initialized) return false;
 
     std::lock_guard<std::recursive_mutex> l(m_apiMutex);
     if (m_hasDevice) return false;
 
-    m_hasDevice = m_runner->m_device.OpenDevice(pciBusID);
+    switch (deviceType)
+    {
+        case synDeviceGaudi:
+            m_hal = new gaudi::GaudiDevice();
+            break;
+        case synDeviceGaudi2:
+            m_hal = new gaudi2::Gaudi2Device();
+            break;
+        default:
+            return false;
+    }
+
+    if (m_hal == nullptr)
+    {
+        assert(0);
+        return false;
+    }
+
+    m_runner = new Runtime(m_hal);
+
+    if (m_runner == nullptr)
+    {
+        assert(0);
+        return false;
+    }
+ 
+    m_hasDevice = m_runner->m_device.OpenDevice(pciBusID, _getHlThunkDevice(deviceType));
     if (m_hasDevice)
     {
         m_runner->m_device.GetHwIpInfo(m_cachedDeviceInfo);
         m_freeDram = m_cachedDeviceInfo.dram_size - s_stolenMemorySize;
-        m_memoryAlloc.Init(m_cachedDeviceInfo.dram_size, m_cachedDeviceInfo.dram_base_address);
-        m_sramAlloc.Init(m_cachedDeviceInfo.sram_size, m_cachedDeviceInfo.sram_base_address);
+        m_memoryAlloc.Init(&m_runner->m_device,  m_runner->m_device.IsMmuEnabled(), m_cachedDeviceInfo.dram_size, m_cachedDeviceInfo.dram_base_address);
+        m_sramAlloc.Init(&m_runner->m_device, false, m_cachedDeviceInfo.sram_size, m_cachedDeviceInfo.sram_base_address);
         m_runner->SetDramAlloc(&m_memoryAlloc);
         m_runner->SetSramAlloc(&m_sramAlloc);
     }
@@ -151,10 +196,9 @@ void SynapseState::CloseDevice()
 
     std::lock_guard<std::recursive_mutex> l(m_apiMutex);
     if (!m_hasDevice) return;
-
+    m_memoryAlloc.Deinit();
     m_runner->m_device.CloseDevice();
     m_hasDevice = false;
-    m_memoryAlloc.Deinit();
 }
 
 void* SynapseState::HostAlloc(uint64_t size)
@@ -316,10 +360,14 @@ bool SynapseState::Memcpy(synStreamHandle streamHandle, uint64_t src, uint32_t s
     return m_runner->m_device.CopyHostDevice(toDevice, it->second, devicePtr, size);
 }
 
-KernelDB* SynapseState::GetKernelDB()
+KernelDB* SynapseState::GetKernelDB(synDeviceType deviceType)
 {
     if (!m_initialized) return nullptr;
     std::lock_guard<std::recursive_mutex> l(m_apiMutex);
+    if (!m_kernelDB.initialized())
+    {
+        m_kernelDB.init(deviceType);
+    }
 
     return &m_kernelDB;
 }
@@ -360,10 +408,10 @@ bool SynapseState::Launch(Stream *stream, Recipe *recipe, const synLaunchTensorI
         tensorBaseAddresses[name] = info.pTensorAddress;
     }
 
-    std::vector<TensorDescriptorGaudi> tensorDescs;
+    std::vector<TensorDescriptor> tensorDescs;
     for (unsigned i = 0; i < numTensors + recipe->GetNumAux(); ++i)
     {
-        TensorDescriptorGaudi t;
+        TensorDescriptor t;
         const Tensor* tensor = recipe->GetTensor(i);
         std::string name = tensor->GetName();
         uint64_t baseAddress = 0;
@@ -393,14 +441,8 @@ bool SynapseState::Launch(Stream *stream, Recipe *recipe, const synLaunchTensorI
             if (ret != synSuccess) return ret;
         }
 
-        struct tpc_tensor::reg_tensor_config config;
-        config._raw           = 0;
-        config.last_dim       = 3;
-        config.valid_dim_mask = 0xF;
-        config.data_type      = 0x7; //FP32
-
         t.baseAddrUnion.baseAddr = baseAddress;
-        t.configuration          = config._raw;
+        t.configuration          = m_hal->GetTpcTensorConfig();
         t.paddingValue           = recipe->GetPaddingValue(i);
         unsigned stride = 1;
         for (unsigned dim = 0; dim < 5; ++dim)
@@ -425,4 +467,9 @@ bool SynapseState::Launch(Stream *stream, Recipe *recipe, const synLaunchTensorI
               *m_runner);
 
     return (ret == 0);
+}
+synDeviceType SynapseState::getCurrentDeviceType() const {
+  if (!m_hal)
+    return synDeviceType::synDeviceTypeInvalid;
+  return m_hal->getDeviceType();
 }

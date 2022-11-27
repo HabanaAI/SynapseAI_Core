@@ -40,7 +40,7 @@ void main(
 
     int5 ifmCoords = { depthStart, widthStart, heightStart, batchStart, 0 };
 
-    bfloat128 zero_bf16 = v_bf16_mov_s(0.f);
+    bfloat128 zero_bf16 = 0.f;
 
     bfloat128 x;
     bfloat128 y;
@@ -74,8 +74,8 @@ void main(
                     y = v_convert_f32_to_bf16_all_b(yf32);
 
                     // Move zero for out of bound co-ordinates
-                    bool256 pred = from_bool128(v_u16_cmp_geq_b(d + V_LANE_ID_16, (unsigned)depthEnd, 0, to_bool128((bool256){0})));
-                    y = v_bf16_mov_vb(zero_bf16, 0, y, to_bool128(pred), 0);
+                    bool256 pred = from_bool128(v_u16_cmp_geq_b(d + V_LANE_ID_16, (unsigned)depthEnd));
+                    y = v_bf16_mov_vb(zero_bf16, 0, y, to_bool128(pred));
 
                     // Sum up the values in a vector
                     sum = sum + y;

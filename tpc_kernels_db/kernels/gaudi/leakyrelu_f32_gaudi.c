@@ -53,7 +53,7 @@ void main(tensor input, tensor output, float alpha)
 
                     float64 x = v_f32_ld_tnsr_b(coords, input);
 
-                    bool256 cond = from_bool64(v_f32_cmp_grt_b(x, 0.0, 0, to_bool64((bool256){0})));
+                    bool256 cond = from_bool64(v_f32_cmp_grt_b(x, 0.0));
 
                     float64 y = v_f32_mul_vb(x, alpha, 0, x, to_bool64(cond), 1);
 

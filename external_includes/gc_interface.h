@@ -40,6 +40,7 @@ typedef enum _DeviceId_t
 {
     DEVICE_ID_GOYA              = 0 ,
     DEVICE_ID_GAUDI             = 1 ,
+    DEVICE_ID_GAUDI2            = 3 ,
     // MUST BE LAST
     DEVICE_ID_MAX               = 5
 } DeviceId_t;
@@ -196,7 +197,9 @@ typedef enum _TensorDataType_t
     DATA_U4     = 10,
     DATA_F8_152 = 11,
     DATA_F8_143 = 12,
-    NUM_DATATYPES = 13
+    DATA_I64    = 13,
+    DATA_U64    = 14,
+    NUM_DATATYPES = 15
 } TensorDataType_t;
 
 typedef enum _KernelType_t

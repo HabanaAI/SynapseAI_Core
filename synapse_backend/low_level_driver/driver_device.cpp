@@ -34,17 +34,17 @@ DriverDevice::~DriverDevice()
     assert(m_fd == -1);
 }
 
-bool DriverDevice::OpenDevice(const char* pciId)
+bool DriverDevice::OpenDevice(const char* pciId, const hlthunk_device_name deviceName)
 {
     for (unsigned tries = 0; tries < c_open_device_max_tries_num; tries++)
     {
         if (!strcmp(pciId, ""))
         {
-            m_fd = hlthunk_open(HLTHUNK_DEVICE_GAUDI, NULL);
+            m_fd = hlthunk_open(deviceName, NULL);
         }
         else
         {
-            m_fd = hlthunk_open(HLTHUNK_DEVICE_GAUDI, pciId);
+            m_fd = hlthunk_open(deviceName, pciId);
         }
 
         if ((m_fd == -1) && ((errno == EBUSY) || (errno == EAGAIN)))
@@ -59,7 +59,7 @@ bool DriverDevice::OpenDevice(const char* pciId)
 
     if (m_fd < 0)
     {
-        assert(0 && "Check Driver availability. If using -pci, check pci address provided.");
+        assert(0 && "Check Driver availability.");
         return false;
     }
     else
@@ -87,12 +87,11 @@ bool DriverDevice::SubmitWklds(const std::list<QueueWkld>& setup,
     }
     assert(!wklds.empty() || !setup.empty());
 
-    hl_cs_chunk setupChunks[GAUDI_ENGINE_ID_SIZE];
-    hl_cs_chunk exeChunks[GAUDI_ENGINE_ID_SIZE];
-    memset(&exeChunks, 0, sizeof(exeChunks));
-    memset(&setupChunks, 0, sizeof(setupChunks));
-    assert(setup.size() <= (sizeof(setupChunks) / sizeof(setupChunks[0])));
-    assert(wklds.size() <= (sizeof(exeChunks) / sizeof(exeChunks[0])));
+    std::vector<hl_cs_chunk> setupChunks(GetHal()->GetQidSize(), hl_cs_chunk{});
+    std::vector<hl_cs_chunk> exeChunks(GetHal()->GetQidSize(), hl_cs_chunk{});
+
+    assert(setup.size() <= setupChunks.size());
+    assert(wklds.size() <= exeChunks.size());
 
     unsigned idx = 0;
     for (auto& su : setup)
@@ -118,8 +117,8 @@ bool DriverDevice::SubmitWklds(const std::list<QueueWkld>& setup,
     hlthunk_cs_out argsOut;
     memset(&argsIn, 0, sizeof(hlthunk_cs_in));
     memset(&argsOut, 0, sizeof(hlthunk_cs_out));
-    argsIn.chunks_restore     = setupChunks;
-    argsIn.chunks_execute     = exeChunks;
+    argsIn.chunks_restore     = setupChunks.data();
+    argsIn.chunks_execute     = exeChunks.data();
     argsIn.num_chunks_restore = setup.size();
     argsIn.num_chunks_execute = wklds.size();
     argsIn.flags              = forceSetup ? HL_CS_FLAGS_FORCE_RESTORE : 0;
@@ -169,36 +168,51 @@ bool DriverDevice::GetCB(unsigned size, Handle& handle, void*& hostAddr, unsigne
     static const unsigned int c_page_size = getpagesize();
     assert(size);
     unsigned requestedSize = std::max(size, c_page_size);
-
+    uint64_t hostVA        = 0;
     int ret;
-
-    ret = hlthunk_request_command_buffer(m_fd, requestedSize, &handle);
-
-    if (ret != 0)
+    bool     isUserCb;
+    if (IsMmuEnabled())
     {
-        assert(0);
-        return false;
-    }
+        hostAddr = (void*)(new uint8_t[requestedSize]);
 
-    if (m_cbHandles.find(handle) != m_cbHandles.end())
+        ret = MapHostMemory((uint64_t)hostAddr, requestedSize, hostVA);
+        assert(hostVA);
+        handle   = hostVA;
+        isUserCb = true;
+        flags = HL_CS_CHUNK_FLAGS_USER_ALLOC_CB; // CB is allocated by the user
+    }
+    else
     {
-        assert(0);
-        return false;
-    }
-    flags = 0; // CB is not allocated by the user
-    // mapping handle to host address
-    hostAddr = mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, m_fd, (off_t)handle);
+        ret = hlthunk_request_command_buffer(m_fd, requestedSize, &handle);
 
-    if (!hostAddr)
-    {
-        assert(0);
-        return false;
-    }
+        if (ret != 0)
+        {
+            assert(0);
+            return false;
+        }
 
+        if (m_cbHandles.find(handle) != m_cbHandles.end())
+        {
+            assert(0);
+            return false;
+        }
+        flags = 0; // CB is not allocated by the user
+        // mapping handle to host address
+        hostAddr = mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, m_fd, (off_t)handle);
+
+        if (!hostAddr)
+        {
+            assert(0);
+            return false;
+        }
+        isUserCb = false;
+    }
     VirtMem vm = {0};
+    vm.addrVirt = hostVA;
     vm.addr    = hostAddr;
     vm.size    = size;
     vm.cbSize  = requestedSize;
+    vm.isUserCb = isUserCb;
 
     m_cbHandles[handle] = vm;
 
@@ -222,33 +236,33 @@ bool DriverDevice::ReleaseCB(Handle handle)
     VirtMem vm = m_cbHandles[handle];
 
     int                 ret;
-    hlthunk_device_name deviceName = GetDeviceName();
-    if ((deviceName == HLTHUNK_DEVICE_GOYA) || (deviceName == HLTHUNK_DEVICE_GAUDI) ||
-        (!IsMmuEnabled()))
+    if (vm.isUserCb)
     {
-        ret = munmap(vm.addr, vm.size);
+        ret = UnmapMemory(vm.addrVirt);
+        delete[](uint8_t*) vm.addr;
+        if (!ret)
+        {
+            assert(0);
+            return false;
+        }
+    }
+    else
+    {
+        ret = munmap(vm.addr, vm.cbSize);
         if (ret != 0)
         {
             assert(0);
             return false;
         }
-
         ret = hlthunk_destroy_command_buffer(m_fd, (__u64)handle);
-    }
-    else
-    {
-        hlthunk_memory_unmap(m_fd, handle);
-        free(m_cbHandles[handle].addr);
-        ret = 0;
+        if (ret != 0)
+        {
+            assert(0);
+            return false;
+        }
     }
 
     m_cbHandles.erase(handle);
-
-    if (ret != 0)
-    {
-        assert(0);
-        return false;
-    }
 
     return true;
 }
@@ -292,6 +306,38 @@ bool DriverDevice::UnmapMemory(uint64_t addr)
     return true;
 }
 
+uint64_t DriverDevice::dramMemoryAllocAndMap()
+{
+    uint64_t size = c_dram_phys_size;
+
+    m_dramHandle   = hlthunk_device_memory_alloc(m_fd, size, 0, false, false); // contiguous = 0
+    m_dramVirtAddr = 0;
+    assert(m_dramHandle);
+    m_dramVirtAddr = hlthunk_device_memory_map(m_fd, m_dramHandle, 0);
+    if (!m_dramVirtAddr)
+    {
+        dramMemoryFree();
+        assert(0);
+        return 0;
+    }
+
+    return m_dramVirtAddr;
+}
+
+bool DriverDevice::dramMemoryFree()
+{
+    if (m_dramHandle) {
+        int ret = hlthunk_device_memory_free(m_fd, m_dramHandle);
+        if (ret) {
+            return false;
+        } else {
+        }
+        m_dramHandle = 0;
+    }
+
+    return true;
+}
+
 bool DriverDevice::GetHwIpInfo(hlthunk_hw_ip_info& hwInfo)
 {
     if (m_fd == -1)
@@ -309,7 +355,7 @@ bool DriverDevice::GetHwIpInfo(hlthunk_hw_ip_info& hwInfo)
         assert(0);
         return false;
     }
-
+    c_dram_phys_size = hwInfo.dram_size;
     return true;
 }
 
@@ -350,7 +396,7 @@ bool DriverDevice::IsDramEnabled()
 
 bool DriverDevice::IsMmuEnabled()
 {
-    return true;
+    return GetHal()->isMmuEnabled();
 }
 
 bool DriverDevice::CopyHostDevice(bool toDevice, uint64_t hostPtr, uint64_t devicePtr, uint32_t size)
@@ -378,9 +424,9 @@ bool DriverDevice::CopyHostDevice(bool toDevice, uint64_t hostPtr, uint64_t devi
     std::list<QueueWkld> execute;
 
     workload.size   = cmdSize;
-    workload.flags  = 0;
+    workload.flags  = flags;
     workload.buffer = handle;
-    workload.qid    = toDevice ? GAUDI_QUEUE_ID_DMA_0_0 : GAUDI_QUEUE_ID_DMA_1_0;
+    workload.qid    = toDevice ? GetHal()->GetDMAInQid() : GetHal()->GetDMAOutQid();
 
     execute.push_back(workload);
 

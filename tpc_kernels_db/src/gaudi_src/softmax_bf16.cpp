@@ -6,10 +6,10 @@
  */
 #include "softmax_bf16.hpp"
 
-extern unsigned char _binary___softmax_fcd_bf16_o_start;
-extern unsigned char _binary___softmax_fcd_bf16_o_end;
-extern unsigned char _binary___softmax_non_fcd_bf16_o_start;
-extern unsigned char _binary___softmax_non_fcd_bf16_o_end;
+extern unsigned char _kernels_gaudi_binary___softmax_fcd_bf16_o_start;
+extern unsigned char _kernels_gaudi_binary___softmax_fcd_bf16_o_end;
+extern unsigned char _kernels_gaudi_binary___softmax_non_fcd_bf16_o_start;
+extern unsigned char _kernels_gaudi_binary___softmax_non_fcd_bf16_o_end;
 
  gcapi::GlueCodeReturn_t SoftMaxBF16::GetKernelNameFcd(
              char kernelName [gcapi::MAX_NODE_NAME])
@@ -192,8 +192,8 @@ gcapi::GlueCodeReturn_t SoftMaxBF16::GetGcDefinitions(
     /*************************************************************************************
     *    Stage V -  Load ISA into the descriptor.
     **************************************************************************************/
-    unsigned IsaSize1 = (&_binary___softmax_fcd_bf16_o_end - &_binary___softmax_fcd_bf16_o_start);
-    unsigned IsaSize2 = (&_binary___softmax_non_fcd_bf16_o_end - &_binary___softmax_non_fcd_bf16_o_start);
+    unsigned IsaSize1 = (&_kernels_gaudi_binary___softmax_fcd_bf16_o_end - &_kernels_gaudi_binary___softmax_fcd_bf16_o_start);
+    unsigned IsaSize2 = (&_kernels_gaudi_binary___softmax_non_fcd_bf16_o_end - &_kernels_gaudi_binary___softmax_non_fcd_bf16_o_start);
     unsigned givenBinarySize = kernel->elfSize;
     unsigned IsaSize = def->axis==0? IsaSize1:IsaSize2;
 
@@ -205,14 +205,14 @@ gcapi::GlueCodeReturn_t SoftMaxBF16::GetGcDefinitions(
         {
             // copy binary out
             memcpy (kernel->kernelElf ,
-                    &_binary___softmax_fcd_bf16_o_start,
+                    &_kernels_gaudi_binary___softmax_fcd_bf16_o_start,
                     IsaSize);
         }
         else
         {
             // copy binary out
             memcpy (kernel->kernelElf ,
-                    &_binary___softmax_non_fcd_bf16_o_start,
+                    &_kernels_gaudi_binary___softmax_non_fcd_bf16_o_start,
                     IsaSize);
         }
     }

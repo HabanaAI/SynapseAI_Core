@@ -14,11 +14,14 @@ HeapAllocator::HeapAllocator(const std::string &name) : MemoryAllocatorBase(name
 {
 }
 
-void HeapAllocator::Init(uint64_t memorySize, uint64_t base)
+void HeapAllocator::Init(DriverDevice* device, bool mmuEnabled, uint64_t memorySize, uint64_t base)
 {
     std::lock_guard<std::mutex> l(m_mutex);
-    MemoryAllocatorBase::Init(memorySize, base);
-
+    MemoryAllocatorBase::Init(device, mmuEnabled, memorySize, base);
+    if (m_mmuEnabled)
+    {
+        m_device->dramMemoryAllocAndMap();
+    }
     Range allRanges;
     allRanges.size        = m_memorySize;
     allRanges.base        = m_base;
@@ -33,6 +36,10 @@ void HeapAllocator::Deinit()
     m_occupiedRanges.clear();
     m_memorySize = 0;
     m_base       = 0;
+    if (m_mmuEnabled)
+    {
+        m_device->dramMemoryFree();
+    }
 }
 
 uint64_t HeapAllocator::Allocate(uint64_t size, uint64_t alignment, uint64_t offset)

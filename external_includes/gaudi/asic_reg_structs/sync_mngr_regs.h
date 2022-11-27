@@ -18,11 +18,14 @@ namespace sync_mngr {
 /*
  SYNC_MNGR block
 */
+namespace gaudi
+{
 struct block_sync_mngr {
 	struct block_sob_glbl sync_mngr_glbl;
 	uint32_t _pad8[1022];
 	struct block_sob_objs sync_mngr_objs;
 };
 
+} // namespace gaudi
 #pragma pack(pop)
 #endif /* ASIC_REG_STRUCTS_SYNC_MNGR_H_ */

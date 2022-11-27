@@ -14,6 +14,7 @@
 #include "TensorDescriptor.h"
 #include "program.h"
 #include "index_space.h"
+#include "synapse_common_types.h"
 
 class HWAbstractionLayer
 {
@@ -21,8 +22,9 @@ public:
     HWAbstractionLayer() {}
     virtual ~HWAbstractionLayer() {}
 
-    virtual unsigned    GetTensorSizeFromDesc(TensorDescriptorGaudi& desc) const = 0;
-    virtual unsigned    GetTensorSizeFromDesc(TensorDescriptorGaudi& desc0, TensorDescriptorGaudi& desc1) const = 0;
+    virtual synDeviceType getDeviceType() const = 0;
+    virtual unsigned    GetTensorSizeFromDesc(TensorDescriptor& desc) const = 0;
+    virtual unsigned    GetTensorSizeFromDesc(TensorDescriptor& desc0, TensorDescriptor& desc1) const = 0;
     virtual unsigned    GetSpecialFuncTabNr() const = 0;
     virtual void        GetSpecialFuncTabSizes(uint32_t* sizes, unsigned sizesLen) const = 0;
     virtual void        CopySpecialFuncTab(
@@ -47,7 +49,8 @@ public:
     virtual uint64_t    GetSyncMngrVarAddr(std::string varName, unsigned idx) const = 0;
     virtual unsigned    GetDmaDownVarOffset(std::string varName) const = 0;
     virtual unsigned    GetTpcCfgVarOffset(std::string varName) const = 0;
-    virtual unsigned    GetMonArmRawVal(unsigned mask, unsigned sid, unsigned sod, unsigned sop) const = 0;
+    virtual unsigned    GetMonArmRawVal(uint8_t mask, uint8_t sid, unsigned sod, unsigned sop) const = 0;
+    virtual unsigned    GetMonCfgRawVal(unsigned msbSid) const {return 0;}
     virtual void        GetTpcTabOffset(int TabIdx, uint32_t* baseAddrLow, uint32_t* baseAddrHigh) const = 0;
 
     virtual std::shared_ptr<CPCommand::WReg32>              GenWReg32(uint16_t offset, uint32_t value, bool mb = false, bool rb = false, bool eb = false) const = 0;
@@ -63,9 +66,13 @@ public:
     virtual void        WriteSrf(TpcDescHandle tpcDesc, const uint32_t* params, unsigned paramsNr) const = 0;
     virtual void        WriteKernelCfg(TpcDescHandle tpcDesc, uint32_t smallVlm) const = 0;
     virtual void        WriteKernelAddr(TpcDescHandle tpcDesc, uint64_t kernelAddr) const = 0;
-    virtual void        WriteTensorDesc(TpcDescHandle tpcDesc, TensorDescriptorGaudi& tensorDesc, unsigned tensorId) const = 0;
-    virtual void        WriteTpcJobDesc(TpcDescHandle tpcDesc, const IndexSpace& partition, uint32_t contextId, uint32_t soAddr, uint32_t soMsg, uint32_t soIdx, bool updatePrintfAddr, int printfTensorIdx) const = 0;
+    virtual void        WriteTensorDesc(TpcDescHandle tpcDesc, TensorDescriptor& tensorDesc, unsigned tensorId) const = 0;
+    virtual void        WriteTpcJobDesc(TpcDescHandle tpcDesc, const IndexSpace& partition, uint32_t soAddr, uint32_t soMsg, bool updatePrintfAddr, int printfTensorIdx) const = 0;
+    virtual uint32_t    GenTpcCmd() const = 0;
+    virtual uint32_t    GetTpcTensorConfig() const = 0;
 
+    virtual bool isMmuEnabled() const = 0;
+    virtual bool shouldConfigureMonCfg() const = 0;
     void SetSmInfo(int firstAvailSob, int firstAvailMon)
     {
         m_firstAvailMonitor = firstAvailMon;

@@ -25,9 +25,10 @@ endif()
 # Add TPC-C source files to be compiled by TPC Gaudi compiler and
 # linked into tpc_kernels executable.
 file(GLOB TPC_C_GAUDI_SOURCES_TO_EMBED ./kernels/gaudi/*.c)
+file(GLOB TPC_C_GAUDI2_SOURCES_TO_EMBED ./kernels/gaudi2/*.c)
 
 # Generate a list of all TPC headers for compilation dependencies.
-file(GLOB TPC_GAUDI_HEADERS ./kernels/gaudi/*.h)
+file(GLOB TPC_GAUDI_HEADERS ./kernels/include/*.h)
 
 include_directories(../external_includes)
 

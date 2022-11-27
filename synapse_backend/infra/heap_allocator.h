@@ -23,7 +23,7 @@ public:
     HeapAllocator(const std::string& name);
     virtual ~HeapAllocator() {}
 
-    virtual void     Init(uint64_t memorySize, uint64_t base = 0) override;
+    virtual void     Init(DriverDevice* device, bool mmuEnabled, uint64_t memorySize, uint64_t base = 0) override;
     void             Deinit();
     virtual uint64_t Allocate(uint64_t size, uint64_t alignment, uint64_t offset = 0) override;
     virtual void     Free(uint64_t ptr) override;

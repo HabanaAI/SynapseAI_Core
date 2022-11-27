@@ -9,7 +9,8 @@
 #include <stdint.h>
 
 #pragma pack(push, 1)
-
+namespace gaudi
+{
 namespace sob_objs {
 /*
  SM_SEC 
@@ -127,5 +128,6 @@ struct block_sob_objs {
 	struct sob_objs::reg_sm_sec sm_sec[256];
 };
 
+} // namespace gaudi
 #pragma pack(pop)
 #endif /* ASIC_REG_STRUCTS_SOB_OBJS_H_ */

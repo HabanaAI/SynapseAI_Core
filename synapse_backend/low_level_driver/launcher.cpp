@@ -6,11 +6,12 @@
  */
 
 
+#include "gaudi2/asic_reg/gaudi2_blocks.h"
+#include "program.h"
 #undef NDEBUG
 #include <assert.h>
 #include <list>
 #include <set>
-#include <iostream>
 #include <iostream>
 #include <stddef.h>
 #include <limits.h>
@@ -182,12 +183,14 @@ void TestLauncher::ExecuteProgram(Device* device, const unsigned stream,
 
     unsigned dmaOutBuffSize = outputBuffers->size() * pLinDma->GetSize();
 
-    dmaInBuffSize += pMsgLong->GetSize(); // reset input sync object
-    dmaInBuffSize +=
-        CountBits(syncInfo->outputSOSel) * pMsgLong->GetSize(); // reset output sync object
-
     std::shared_ptr<CPCommand::Fence> pFence = device->GetHal()->GenFence(0, 0, 0);
     dmaOutBuffSize += 4 * pMsgLong->GetSize(); // arm the monitor
+
+    if (device->GetHal()->shouldConfigureMonCfg())
+    {
+        dmaOutBuffSize += pMsgLong->GetSize(); // arm the monitor - mon_config
+    }
+
     dmaOutBuffSize += pFence->GetSize();       // fence
     dmaOutBuffSize += pMsgLong->GetSize();     // reset input sync object
     dmaOutBuffSize +=
@@ -217,60 +220,24 @@ void TestLauncher::ExecuteProgram(Device* device, const unsigned stream,
     assert(dmaInHostPtr != nullptr && "dmaInHostPtr is null!");
     uint8_t* dmaInPtr = ((uint8_t*)dmaInHostPtr);
 
-    // reset input so
-    {
-        uint64_t                            addr     = device->GetHal()->GetDmaDownSyncObjectAddr();
-        std::shared_ptr<CPCommand::MsgLong> pMsgLong = device->GetHal()->GenMsgLong(addr, 0);
-        pMsgLong->Serialize((void**)&dmaInPtr);
-    }
-
-    // reset output so
-    static const unsigned c_so_group_size = device->GetHal()->GetSyncObjectGroupSize();
-    for (unsigned k = 0; k < c_so_group_size; k++)
-    {
-        if (syncInfo->outputSOSel & (1 << k))
-        {
-            unsigned soIdx = device->GetHal()->GetDmaUpSyncObjectIndex() + k;
-            uint64_t addr  = device->GetHal()->GetSyncMngrVarAddr("sob_obj", soIdx);
-            std::shared_ptr<CPCommand::MsgLong> pMsgLong = device->GetHal()->GenMsgLong(addr, 0);
-            pMsgLong->Serialize((void**)&dmaInPtr);
-        }
-    }
-
-    // INFO: temporarily removing ARB_POINT packet from DMA down/up
-    /*
-    // arb request
-    if (arbitration && arbitration->enable)
-    {
-        packet_arb_point * ptr = (packet_arb_point*)dmaInPtr;
-        ptr->eng_barrier = 0;
-        ptr->msg_barrier = 0;
-        ptr->reg_barrier = 0;
-        ptr->opcode = PACKET_ARB_POINT;
-        ptr->pred = 0;
-        ptr->priority = arbitration->prio;
-        ptr->rls = 0;
-        dmaInPtr += sizeof(packet_arb_point);
-    }
-    */
-
     // dma in
     {
         uint64_t syncObj = device->GetHal()->GetSyncMngrVarAddr(
             "sob_obj", device->GetHal()->GetDmaDownSyncObjectIndex());
-
         // TODO : add support for multiple streams
+        uint16_t offset = device->GetHal()->GetDmaDownVarOffset("wr_comp_addr_lo");
         std::shared_ptr<CPCommand::WReg32> pMsg1 = device->GetHal()->GenWReg32(
-            device->GetHal()->GetDmaDownVarOffset("wr_comp_addr_lo"), (uint32_t)syncObj);
+            offset, (uint32_t)syncObj);
         pMsg1->Serialize((void**)&dmaInPtr);
 
+        offset = device->GetHal()->GetDmaDownVarOffset("wr_comp_addr_hi");
         std::shared_ptr<CPCommand::WReg32> pMsg2 = device->GetHal()->GenWReg32(
-            device->GetHal()->GetDmaDownVarOffset("wr_comp_addr_hi"),
-            (uint32_t)(syncObj >> 32));
+            offset, (uint32_t)(syncObj >> 32));
         pMsg2->Serialize((void**)&dmaInPtr);
 
+        offset = device->GetHal()->GetDmaDownVarOffset("wr_comp_wdata");
         std::shared_ptr<CPCommand::WReg32> pMsg3 = device->GetHal()->GenWReg32(
-            device->GetHal()->GetDmaDownVarOffset("wr_comp_wdata"), 1, true, true, true);
+            offset, 1, true, true, true);
         pMsg3->Serialize((void**)&dmaInPtr);
 
         unsigned bufferCtr = 0;
@@ -314,75 +281,17 @@ void TestLauncher::ExecuteProgram(Device* device, const unsigned stream,
     wkldsList.push_back(inputWkld);
 
     // step 4 - prepare output buffer
-    unsigned outQId    = 0;
-    unsigned dmaOutQid = device->GetHal()->GetDMAOutQid();
-    switch (stream)
-    {
-    case 0:
-        outQId = dmaOutQid;
-        break;
-    case 1:
-        outQId = dmaOutQid + 1;
-        break;
-    case 2:
-        outQId = dmaOutQid + 2;
-        break;
-    case 3:
-        outQId = dmaOutQid + 3;
-        break;
-    default:
-        assert(0);
-    }
 
+    unsigned dmaOutQid = device->GetHal()->GetDMAOutQid();
     unsigned junk;
     uint64_t qmBase;
-    device->GetHal()->Qid2Qman(outQId, qmBase, junk);
+    device->GetHal()->Qid2Qman(dmaOutQid + stream, qmBase, junk);
 
     assert(dmaOutHostPtr != nullptr && "dmaOutHostPtr is null!");
     uint8_t* dmaOutPtr = ((uint8_t*)dmaOutHostPtr);
+    uint64_t fenceAddr  = qmBase + device->GetHal()->GetQmanFenceOffset(0, stream);
 
-    // mon arm - addr low
-    {
-        uint64_t fenceAddr  = qmBase + device->GetHal()->GetQmanFenceOffset(0, stream);
-        uint64_t monArmAddr = device->GetHal()->GetSyncMngrVarAddr("mon_pay_addrl", outQId);
-        std::shared_ptr<CPCommand::MsgLong> pMsgLong =
-            device->GetHal()->GenMsgLong(monArmAddr, (uint32_t)fenceAddr);
-        pMsgLong->Serialize((void**)&dmaOutPtr);
-    }
-
-    // mon arm - addr high
-    {
-        uint64_t fenceAddr  = qmBase + device->GetHal()->GetQmanFenceOffset(0, stream);
-        uint64_t monArmAddr = device->GetHal()->GetSyncMngrVarAddr("mon_pay_addrh", outQId);
-        std::shared_ptr<CPCommand::MsgLong> pMsgLong =
-            device->GetHal()->GenMsgLong(monArmAddr, (uint32_t)(fenceAddr >> 32));
-        pMsgLong->Serialize((void**)&dmaOutPtr);
-    }
-
-    // mon arm - value
-    {
-        uint64_t monArmAddr = device->GetHal()->GetSyncMngrVarAddr("mon_pay_data", outQId);
-        std::shared_ptr<CPCommand::MsgLong> pMsgLong = device->GetHal()->GenMsgLong(monArmAddr, 1);
-        pMsgLong->Serialize((void**)&dmaOutPtr);
-    }
-
-    // mon arm - arm
-    {
-        uint64_t monArmAddr = device->GetHal()->GetSyncMngrVarAddr("mon_arm", outQId);
-        uint32_t monArmVal  = device->GetHal()->GetMonArmRawVal(~(syncInfo->outputSOSel), // mask
-                                                               syncInfo->outputSOIdx,    // sid
-                                                               syncInfo->outputSOTarget, // sod
-                                                               0);                       // sop
-        std::shared_ptr<CPCommand::MsgLong> pMsgLong =
-            device->GetHal()->GenMsgLong(monArmAddr, monArmVal);
-        pMsgLong->Serialize((void**)&dmaOutPtr);
-    }
-
-    // fence
-    {
-        std::shared_ptr<CPCommand::Fence> pFence = device->GetHal()->GenFence(0, 1, 1);
-        pFence->Serialize((void**)&dmaOutPtr);
-    }
+    addMonitorForNode(device, stream, syncInfo, dmaOutQid + stream, fenceAddr, &dmaOutPtr, nullptr, true);
 
     // dma
     unsigned dmaDir;
@@ -403,22 +312,18 @@ void TestLauncher::ExecuteProgram(Device* device, const unsigned stream,
     }
 
     // reset output so
-    for (unsigned k = 0; k < c_so_group_size; k++)
-    {
-        if (syncInfo->outputSOSel & (1 << k))
-        {
-            unsigned soIdx = device->GetHal()->GetDmaUpSyncObjectIndex() + k;
-            uint64_t addr  = device->GetHal()->GetSyncMngrVarAddr("sob_obj", soIdx);
-            std::shared_ptr<CPCommand::MsgLong> pMsgLong = device->GetHal()->GenMsgLong(addr, 0);
-            pMsgLong->Serialize((void**)&dmaOutPtr);
-        }
+     {
+        uint64_t                            addr = device->GetHal()->GetDmaUpSyncObjectAddr();
+        std::shared_ptr<CPCommand::MsgLong> pMsgLong =
+            device->GetHal()->GenMsgLong(addr, 0);
+        pMsgLong->Serialize((void**)&dmaOutPtr);
     }
 
     assert(((uint64_t)dmaOutPtr - (uint64_t)dmaOutHostPtr) == dmaOutBuffSize);
     Device::QueueWkld outputWkld;
     outputWkld.buffer = dmaOutHandle;
     outputWkld.size   = dmaOutBuffSize;
-    outputWkld.qid    = outQId;
+    outputWkld.qid    = dmaOutQid + stream;
     outputWkld.flags  = dmaOutFlags;
 
     wkldsList.push_back(outputWkld);
@@ -498,7 +403,7 @@ void TestLauncher::CreateAndExecuteProgram(SynMemoryAllocator* memAlloc, Device*
     programBuffer.hostVirtAddr = addressOut;
 
     DownloadProgram2Device(device, stream, &programBuffer);
-
+    ResetSoObjsInDevice(device, syncInfo, stream);
     ExecuteProgram(device, stream, &devicePrograms, syncInfo, inputBuffers,
                    outputBuffers);
 
@@ -519,49 +424,177 @@ void TestLauncher::AddInputFenceSequence(Device* device, CPProgram& prog,
     unsigned stream;
     unsigned qid = prog.GetQId();
     device->GetHal()->Qid2Qman(qid, qmanBase, stream);
-    uint64_t fenceAddr;
-    switch (stream)
+    uint64_t fenceAddr = qmanBase + device->GetHal()->GetQmanFenceOffset(stream, Device::c_streams_num);
+    SyncInfo syncInfo {syncObjectGroup /*idx*/, 1 /*sel*/, 1 /*target*/};
+    addMonitorForNode(device, stream, &syncInfo, qid, fenceAddr, nullptr, &prog, true);
+
+}
+void TestLauncher::ResetSoObjsInDevice(Device *device, const SyncInfo* syncInfo,
+                                       unsigned stream) 
+{  Device::Handle cmdBuffHandle;
+  void *hostAddr;
+  unsigned cmdBuffFlags;
+  std::shared_ptr<CPCommand::MsgLong> dummyMsgLong =
+      device->GetHal()->GenMsgLong(0, 0);
+
+  unsigned cmdBuffSize = dummyMsgLong->GetSize(); // reset input sync object
+  cmdBuffSize += CountBits(syncInfo->outputSOSel) *
+                 dummyMsgLong->GetSize(); // reset output sync object
+  device->GetCB(cmdBuffSize, cmdBuffHandle, hostAddr, cmdBuffFlags);
+
+  // reset input so
+  {
+    std::shared_ptr<CPCommand::MsgLong> pMsgLong;
+    uint64_t addr = device->GetHal()->GetDmaDownSyncObjectAddr();
+    pMsgLong = device->GetHal()->GenMsgLong(addr, 0);
+    pMsgLong->Serialize(&hostAddr);
+  }
+
+  // reset output so
+  static const unsigned c_so_group_size =
+      device->GetHal()->GetSyncObjectGroupSize();
+  for (unsigned k = 0; k < c_so_group_size; k++) {
+    if (syncInfo->outputSOSel & (1 << k)) {
+      unsigned soIdx = device->GetHal()->GetDmaUpSyncObjectIndex() + k;
+      uint64_t addr = device->GetHal()->GetSyncMngrVarAddr("sob_obj", soIdx);
+      std::shared_ptr<CPCommand::MsgLong> pMsgLong =
+          device->GetHal()->GenMsgLong(addr, 0);
+      pMsgLong->Serialize((void **)&hostAddr);
+    }
+  }
+  Device::QueueWkld wkld;
+  unsigned dmaInQid = device->GetHal()->GetDMAInQid();
+  switch (stream) {
+  case 0:
+    wkld.qid = dmaInQid;
+    break;
+  case 1:
+    wkld.qid = dmaInQid + 1;
+    break;
+  case 2:
+    wkld.qid = dmaInQid + 2;
+    break;
+  case 3:
+    wkld.qid = dmaInQid + 3;
+    break;
+  default:
+    assert(0);
+  }
+  wkld.buffer = cmdBuffHandle;
+  wkld.size = cmdBuffSize;
+  wkld.flags = cmdBuffFlags;
+
+  std::list<Device::QueueWkld> wkldsList = {};
+  wkldsList.push_back(wkld);
+
+  Device::Handle submitHandle;
+  std::list<Device::QueueWkld> setupList;
+  device->SubmitWklds(setupList, wkldsList, false, submitHandle);
+  device->Wait(submitHandle);
+  device->ReleaseCB(cmdBuffHandle); 
+}
+
+
+void TestLauncher::addMonitorForNode(Device* device,
+                                     unsigned stream,
+                                     const SyncInfo* syncInfo,
+                                     uint32_t outMonitorIdx,
+                                     uint64_t fenceAddr,
+                                     uint8_t** CBPtr,
+                                     CPProgram* prog,
+                                     bool addFence)
+{
+    assert(CBPtr != nullptr || prog != nullptr);
+    bool addToProg = (prog != nullptr);
+    // mon arm - addr low
     {
-    case 0:
-        fenceAddr = qmanBase + device->GetHal()->GetQmanFenceOffset(0, Device::c_streams_num);
-        break;
-    case 1:
-        fenceAddr = qmanBase + device->GetHal()->GetQmanFenceOffset(1, Device::c_streams_num);
-        break;
-    case 2:
-        fenceAddr = qmanBase + device->GetHal()->GetQmanFenceOffset(2, Device::c_streams_num);
-        break;
-    case 3:
-        fenceAddr = qmanBase + device->GetHal()->GetQmanFenceOffset(3, Device::c_streams_num);
-        break;
-    default:
-        assert(0);
+        uint64_t monArmAddr = device->GetHal()->GetSyncMngrVarAddr("mon_pay_addrl", outMonitorIdx);
+        std::shared_ptr<CPCommand::MsgLong> pMsgLong =
+            device->GetHal()->GenMsgLong(monArmAddr, (uint32_t)fenceAddr);
+        if (addToProg)
+        {
+            prog->AddCommandsBack(*pMsgLong);
+        }
+        else
+        {
+            pMsgLong->Serialize((void**)CBPtr);
+        }
     }
 
-    std::shared_ptr<CPCommand::MsgLong> pMsgLong1 = device->GetHal()->GenMsgLong(
-        device->GetHal()->GetSyncMngrVarAddr("mon_pay_addrl", qid), // addr
-        (uint32_t)fenceAddr);                                       // value
-    prog.AddCommandsBack(*pMsgLong1);
+    // mon arm - addr high
+    {
+        uint64_t monArmAddr = device->GetHal()->GetSyncMngrVarAddr("mon_pay_addrh", outMonitorIdx);
+        std::shared_ptr<CPCommand::MsgLong> pMsgLong =
+            device->GetHal()->GenMsgLong(monArmAddr, (uint32_t)(fenceAddr >> 32));
+        if (addToProg)
+        {
+            prog->AddCommandsBack(*pMsgLong);
+        }
+        else
+        {
+            pMsgLong->Serialize((void**)CBPtr);
+        }
+    }
 
-    std::shared_ptr<CPCommand::MsgLong> pMsgLong2 = device->GetHal()->GenMsgLong(
-        device->GetHal()->GetSyncMngrVarAddr("mon_pay_addrh", qid), // addr
-        (uint32_t)(fenceAddr >> 32));                               // value
-    prog.AddCommandsBack(*pMsgLong2);
+    // mon arm - value
+    {
+        uint64_t monArmAddr = device->GetHal()->GetSyncMngrVarAddr("mon_pay_data", outMonitorIdx);
+        std::shared_ptr<CPCommand::MsgLong> pMsgLong = device->GetHal()->GenMsgLong(monArmAddr, 1);
+        if (addToProg)
+        {
+            prog->AddCommandsBack(*pMsgLong);
+        }
+        else
+        {
+            pMsgLong->Serialize((void**)CBPtr);
+        }
+    }
 
-    std::shared_ptr<CPCommand::MsgLong> pMsgLong3 = device->GetHal()->GenMsgLong(
-        device->GetHal()->GetSyncMngrVarAddr("mon_pay_data", qid), // addr
-        1);                                                        // value
-    prog.AddCommandsBack(*pMsgLong3);
+    if(device->GetHal()->shouldConfigureMonCfg())
+    {
+        uint64_t monCfgAddr = device->GetHal()->GetSyncMngrVarAddr("mon_cfg", outMonitorIdx);
+        uint32_t monCfgVal  = device->GetHal()->GetMonCfgRawVal(syncInfo->outputSOIdx >> 8); // msb
+        std::shared_ptr<CPCommand::MsgLong> pMsgLong =
+            device->GetHal()->GenMsgLong(monCfgAddr, monCfgVal);
+        if (addToProg)
+        {
+            prog->AddCommandsBack(*pMsgLong);
+        }
+        else
+        {
+            pMsgLong->Serialize((void**)CBPtr);
+        }
+    }
 
-    std::shared_ptr<CPCommand::MsgLong> pMsgLong4 =
-        device->GetHal()->GenMsgLong(device->GetHal()->GetSyncMngrVarAddr("mon_arm", qid), // addr
-                                     device->GetHal()->GetMonArmRawVal(                    // value
-                                         254,             // mask // ~(1) in 8 bit
-                                         syncObjectGroup, // sid
-                                         1,               // sod
-                                         0));             // sop
-    prog.AddCommandsBack(*pMsgLong4);
-
-    std::shared_ptr<CPCommand::Fence> pFence = device->GetHal()->GenFence(stream, 1, 1);
-    prog.AddCommandsBack(*pFence);
+    // mon arm - arm
+    {
+        static constexpr unsigned equal_or_great = 0;
+        uint64_t monArmAddr = device->GetHal()->GetSyncMngrVarAddr("mon_arm", outMonitorIdx);
+        uint32_t monArmVal  = device->GetHal()->GetMonArmRawVal(~(uint8_t)(syncInfo->outputSOSel), // mask
+                                                               syncInfo->outputSOIdx,    // sid
+                                                               syncInfo->outputSOTarget, // sod
+                                                               equal_or_great);          // sop
+        std::shared_ptr<CPCommand::MsgLong> pMsgLong =
+            device->GetHal()->GenMsgLong(monArmAddr, monArmVal);
+        if (addToProg)
+        {
+            prog->AddCommandsBack(*pMsgLong);
+        }
+        else
+        {
+            pMsgLong->Serialize((void**)CBPtr);
+        }
+    }
+    if (addFence)
+    {
+        std::shared_ptr<CPCommand::Fence> pFence = device->GetHal()->GenFence(0, 1, 1);
+        if (addToProg)
+        {
+            prog->AddCommandsBack(*pFence);
+        }
+        else
+        {
+            pFence->Serialize((void**)CBPtr);
+        }    
+    }
 }

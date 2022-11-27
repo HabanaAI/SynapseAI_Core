@@ -6,8 +6,9 @@
  */
 
 #include "gaudi_packet_gen.h"
-#include "gaudi_packets.h"
-
+#include "gaudi/gaudi_packets.h"
+namespace gaudi
+{
 unsigned CPCommand::NopGen2::GetSize() const { return sizeof(packet_nop); }
 unsigned CPCommand::StopGen2::GetSize() const { return sizeof(packet_stop); }
 unsigned CPCommand::WReg32Gen2::GetSize() const { return sizeof(packet_wreg32); }
@@ -26,20 +27,20 @@ unsigned CPCommand::LoadAndExecGen2::GetSize() const { return sizeof(packet_load
 unsigned CPCommand::CpDmaGen2::GetSize() const { return sizeof(packet_cp_dma); }
 unsigned CPCommand::ArbPointGen2::GetSize() const { return sizeof(packet_arb_point); }
 
-CPCommand::Command* CPCommand::NopGen2::Clone() const { return new NopGen2(*this); }
-CPCommand::Command* CPCommand::StopGen2::Clone() const { return new StopGen2(*this); }
-CPCommand::Command* CPCommand::WReg32Gen2::Clone() const { return new WReg32Gen2(*this); }
-CPCommand::Command* CPCommand::WRegBulkGen2::Clone() const { return new WRegBulkGen2(*this); }
-CPCommand::Command* CPCommand::MsgLongGen2::Clone() const { return new MsgLongGen2(*this); }
-CPCommand::Command* CPCommand::MsgShortGen2::Clone() const { return new MsgShortGen2(*this); }
-CPCommand::Command* CPCommand::MsgProtGen2::Clone() const { return new MsgProtGen2(*this); }
-CPCommand::Command* CPCommand::FenceGen2::Clone() const { return new FenceGen2(*this); }
-CPCommand::Command* CPCommand::LinDmaGen2::Clone() const { return new LinDmaGen2(*this); }
-CPCommand::Command* CPCommand::RepeatGen2::Clone() const { return new RepeatGen2(*this); }
-CPCommand::Command* CPCommand::WaitGen2::Clone() const { return new WaitGen2(*this); }
-CPCommand::Command* CPCommand::LoadAndExecGen2::Clone() const { return new LoadAndExecGen2(*this); }
-CPCommand::Command* CPCommand::CpDmaGen2::Clone() const { return new CpDmaGen2(*this); }
-CPCommand::Command* CPCommand::ArbPointGen2::Clone() const { return new ArbPointGen2(*this); }
+::CPCommand::Command* CPCommand::NopGen2::Clone() const { return new NopGen2(*this); }
+::CPCommand::Command* CPCommand::StopGen2::Clone() const { return new StopGen2(*this); }
+::CPCommand::Command* CPCommand::WReg32Gen2::Clone() const { return new WReg32Gen2(*this); }
+::CPCommand::Command* CPCommand::WRegBulkGen2::Clone() const { return new WRegBulkGen2(*this); }
+::CPCommand::Command* CPCommand::MsgLongGen2::Clone() const { return new MsgLongGen2(*this); }
+::CPCommand::Command* CPCommand::MsgShortGen2::Clone() const { return new MsgShortGen2(*this); }
+::CPCommand::Command* CPCommand::MsgProtGen2::Clone() const { return new MsgProtGen2(*this); }
+::CPCommand::Command* CPCommand::FenceGen2::Clone() const { return new FenceGen2(*this); }
+::CPCommand::Command* CPCommand::LinDmaGen2::Clone() const { return new LinDmaGen2(*this); }
+::CPCommand::Command* CPCommand::RepeatGen2::Clone() const { return new RepeatGen2(*this); }
+::CPCommand::Command* CPCommand::WaitGen2::Clone() const { return new WaitGen2(*this); }
+::CPCommand::Command* CPCommand::LoadAndExecGen2::Clone() const { return new LoadAndExecGen2(*this); }
+::CPCommand::Command* CPCommand::CpDmaGen2::Clone() const { return new CpDmaGen2(*this); }
+::CPCommand::Command* CPCommand::ArbPointGen2::Clone() const { return new ArbPointGen2(*this); }
 
 void CPCommand::NopGen2::Serialize(void** buff) const
 {
@@ -237,3 +238,5 @@ void CPCommand::ArbPointGen2::Serialize(void** buff) const
     ((packet_arb_point*)(*buff))->pred        = m_pred;
     (*(uint8_t**)buff) += GetSize();
 }
+
+} // namespace gaudi

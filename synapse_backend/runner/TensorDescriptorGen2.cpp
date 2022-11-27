@@ -5,7 +5,7 @@
  *
  */
 
-#include "TPC_IO_REG_SPACE_GEN2.h"
+#include "gaudi/TPC_IO_REG_SPACE_GEN2.h"
 #include "TensorDescriptor.h"
 
 uint32_t gen2_TensorDescriptorElementSizeType(uint32_t configuration) 
@@ -65,4 +65,5 @@ uint32_t get_ElementSizeInBytesFromDataType(TensorDataType DataType)
     }
     return 0;
 }
-}
+} //namespace tpc_gaudi
+

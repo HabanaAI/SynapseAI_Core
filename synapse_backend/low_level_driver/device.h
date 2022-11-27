@@ -30,7 +30,7 @@ public:
 
     typedef uint64_t Handle;
 
-    virtual bool OpenDevice(const char *pciId) = 0;
+    virtual bool OpenDevice(const char *pciId, const hlthunk_device_name deviceName) = 0;
     virtual void CloseDevice() = 0;
     virtual bool SubmitWklds(
         const std::list<QueueWkld> &setup,

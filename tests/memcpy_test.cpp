@@ -7,16 +7,10 @@
 
 #include <cstdlib>
 #include <iostream>
+#include "test_infra.h"
 #include "synapse_api.h"
 
-void random_init_buffer(float* buf, unsigned nElems)
-{
-    srand(2021);
-    for (unsigned i = 0; i < nElems; ++i)
-    {
-        buf[i] = (float)std::rand();
-    }
-}
+
 
 int main(int argc, char* argv[])
 {
@@ -31,11 +25,14 @@ int main(int argc, char* argv[])
         return -1;
     }
 
+    HabanaTest::TestArguments args = HabanaTest::parseArguments(argc, argv);
+
     const unsigned bufferSizeElements = 1024;
     const unsigned bufferSizeBytes    = bufferSizeElements * sizeof(float);
 
     synDeviceId devId;
-    status = synDeviceAcquireByDeviceType(&devId, synDeviceGaudi);
+    const synDeviceType deviceType = args.deviceType;
+    status = synDeviceAcquireByDeviceType(&devId, deviceType);
     if (status != synSuccess)
     {
         std::cout << "No available Gaudi devices!" << std::endl;
@@ -57,7 +54,7 @@ int main(int argc, char* argv[])
         return -1;
     }
 
-    random_init_buffer(input, bufferSizeElements);
+    HabanaTest::random_init_buffer(input, bufferSizeElements);
     //Set output to 0 so valgrind doesn't complain
     memset(output, 0, bufferSizeBytes);
 

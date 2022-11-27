@@ -7,14 +7,14 @@
 #include <cstring>
 #include "relu6_all.hpp"
 
-extern unsigned char _binary___relu6_fwd_f32_o_start;
-extern unsigned char _binary___relu6_fwd_f32_o_end;
-extern unsigned char _binary___relu6_bwd_f32_o_start;
-extern unsigned char _binary___relu6_bwd_f32_o_end;
-extern unsigned char _binary___relu6_fwd_bf16_o_start;
-extern unsigned char _binary___relu6_fwd_bf16_o_end;
-extern unsigned char _binary___relu6_bwd_bf16_o_start;
-extern unsigned char _binary___relu6_bwd_bf16_o_end;
+extern unsigned char _kernels_gaudi_binary___relu6_fwd_f32_o_start;
+extern unsigned char _kernels_gaudi_binary___relu6_fwd_f32_o_end;
+extern unsigned char _kernels_gaudi_binary___relu6_bwd_f32_o_start;
+extern unsigned char _kernels_gaudi_binary___relu6_bwd_f32_o_end;
+extern unsigned char _kernels_gaudi_binary___relu6_fwd_bf16_o_start;
+extern unsigned char _kernels_gaudi_binary___relu6_fwd_bf16_o_end;
+extern unsigned char _kernels_gaudi_binary___relu6_bwd_bf16_o_start;
+extern unsigned char _kernels_gaudi_binary___relu6_bwd_bf16_o_end;
 
 gcapi::GlueCodeReturn_t Relu6All::GetKernelName(
         char kernelName [gcapi::MAX_NODE_NAME], Relu6_mode_t mode)
@@ -212,25 +212,25 @@ gcapi::GlueCodeReturn_t Relu6All::GetGcDefinitions(
     /*************************************************************************************
     *    Stage V -  Load ISA into the descriptor.
     **************************************************************************************/
-    unsigned IsaSize = (&_binary___relu6_fwd_f32_o_end - &_binary___relu6_fwd_f32_o_start);
+    unsigned IsaSize = (&_kernels_gaudi_binary___relu6_fwd_f32_o_end - &_kernels_gaudi_binary___relu6_fwd_f32_o_start);
     unsigned char *binary_kernel;
     switch (m_mode)
     {
         case fwd_f32:
-            IsaSize = (&_binary___relu6_fwd_f32_o_end - &_binary___relu6_fwd_f32_o_start);
-            binary_kernel = &_binary___relu6_fwd_f32_o_start;
+            IsaSize = (&_kernels_gaudi_binary___relu6_fwd_f32_o_end - &_kernels_gaudi_binary___relu6_fwd_f32_o_start);
+            binary_kernel = &_kernels_gaudi_binary___relu6_fwd_f32_o_start;
             break;
         case bwd_f32:
-            IsaSize = (&_binary___relu6_bwd_f32_o_end - &_binary___relu6_bwd_f32_o_start);
-            binary_kernel = &_binary___relu6_bwd_f32_o_start;
+            IsaSize = (&_kernels_gaudi_binary___relu6_bwd_f32_o_end - &_kernels_gaudi_binary___relu6_bwd_f32_o_start);
+            binary_kernel = &_kernels_gaudi_binary___relu6_bwd_f32_o_start;
             break;
         case fwd_bf16:
-            IsaSize = (&_binary___relu6_fwd_bf16_o_end - &_binary___relu6_fwd_bf16_o_start);
-            binary_kernel = &_binary___relu6_fwd_bf16_o_start;
+            IsaSize = (&_kernels_gaudi_binary___relu6_fwd_bf16_o_end - &_kernels_gaudi_binary___relu6_fwd_bf16_o_start);
+            binary_kernel = &_kernels_gaudi_binary___relu6_fwd_bf16_o_start;
             break;
         case bwd_bf16:
-            IsaSize = (&_binary___relu6_bwd_bf16_o_end - &_binary___relu6_bwd_bf16_o_start);
-            binary_kernel = &_binary___relu6_bwd_bf16_o_start;
+            IsaSize = (&_kernels_gaudi_binary___relu6_bwd_bf16_o_end - &_kernels_gaudi_binary___relu6_bwd_bf16_o_start);
+            binary_kernel = &_kernels_gaudi_binary___relu6_bwd_bf16_o_start;
             break;
         default:
             break;

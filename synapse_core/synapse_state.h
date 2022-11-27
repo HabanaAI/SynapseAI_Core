@@ -11,14 +11,15 @@
 #include "synapse_api.h"
 #include "stream.h"
 #include "node.h"
+#include "synapse_api_types.h"
+#include "synapse_common_types.h"
 #include "tensor.h"
 #include "heap_allocator.h"
 #include "kernel_db.h"
 #include "recipe.h"
 
 #include "runtime.h"
-#include "gaudi_device.h"
-
+#include "hw_abstraction_layer.h"
 
 class SynapseState
 {
@@ -34,7 +35,7 @@ public:
 
     void DestroyStream(synStreamHandle handle);
 
-    bool OpenDevice(const char* pciBusID);
+    bool OpenDevice(const char* pciBusID, const synDeviceType deviceType);
     void CloseDevice();
 
     void* HostAlloc(uint64_t size);
@@ -51,8 +52,8 @@ public:
 
     bool Launch(Stream* stream, Recipe* recipe, const synLaunchTensorInfo* launchTensorsInfo, unsigned numTensors);
 
-    KernelDB* GetKernelDB();
-
+    KernelDB* GetKernelDB(synDeviceType deviceType);
+    synDeviceType getCurrentDeviceType() const;
     static const uint64_t s_stolenMemorySize  = 512ULL*1024ULL*1024ULL; //0.5GB
     static const uint64_t s_invalidDeviceAddr = std::numeric_limits<uint64_t>::max();
 

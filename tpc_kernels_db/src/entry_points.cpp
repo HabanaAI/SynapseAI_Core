@@ -53,13 +53,27 @@ gcapi::GlueCodeReturn_t GetKernelNames(_OUT_ char**         names,
            Relu6BwdBF16Instance.GetKernelName(names[GAUDI_KERNEL_RELU6_BWD_BF16], Relu6All::bwd_bf16);
 
         }
-
+    
         if (kernelCount != nullptr)
         {
-            // currently the library support 8 kernel.
+            // currently the library supports GAUDI_KERNEL_MAX_EXAMPLE_KERNEL kernels
             *kernelCount = GAUDI_KERNEL_MAX_EXAMPLE_KERNEL;
         }
     }
+    else if (deviceId == gcapi::DEVICE_ID_GAUDI2)
+    {
+        if (names != nullptr )
+        {
+            CustomdivFwdF32 customdivFwdF32Instance;
+            customdivFwdF32Instance.GetKernelName(names[0]);
+        }
+
+        if (kernelCount != nullptr)
+        {
+            // currently the library supports 1 kernel
+            *kernelCount = 1;
+        }        
+    }    
     else
     {
         if (kernelCount != nullptr)

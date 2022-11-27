@@ -12,9 +12,9 @@ bfloat128_pair_t cast_bf16_to_32bits_lin_order(bfloat128 x)
     bfloat128 tmp;
 
     // 0..15, 32..47, 64..79, 96..111
-    y.v1 = v_bf16_unpack_b(x, ((e_group_0) << 8) | ((e_every_second_element) << 9) | ((e_lower_half_group) << 10), y.v1);
+    y.v1 = v_bf16_unpack_b(x, e_group_0 << 8 | e_every_second_element << 9 | e_lower_half_group << 10, y.v1);
     // 16..31, 48..63, 80..95, 112..127
-    y.v2 = v_bf16_unpack_b(x, ((e_group_1) << 8) | ((e_every_second_element) << 9) | ((e_lower_half_group) << 10), y.v2);
+    y.v2 = v_bf16_unpack_b(x, e_group_1 << 8 | e_every_second_element << 9 | e_lower_half_group << 10, y.v2);
 
     tmp = y.v1;
     // Rearranges the vector in correct order
@@ -191,14 +191,14 @@ void main(tensor input_tensor,
                 in_value_1_float_0 = v_convert_bf16_to_f32_all_b(in_value_1_bf16_av.v1);
                 in_value_1_float_1 = v_convert_bf16_to_f32_all_b(in_value_1_bf16_av.v2);
                 //application of scale and bias
-                in_value_1_float_0.v1 = v_f32_mac_b(in_value_1_float_0.v1, scale_1_v, neg_scale_x_bias_1_v, (e_no_negation) << 1);
-                in_value_1_float_1.v1 = v_f32_mac_b(in_value_1_float_1.v1, scale_1_v, neg_scale_x_bias_1_v, (e_no_negation) << 1);
+                in_value_1_float_0.v1 = v_f32_mac_b(in_value_1_float_0.v1, scale_1_v, neg_scale_x_bias_1_v, e_no_negation << 1);
+                in_value_1_float_1.v1 = v_f32_mac_b(in_value_1_float_1.v1, scale_1_v, neg_scale_x_bias_1_v, e_no_negation << 1);
                 //conversion to f32
                 in_value_2_float_0 = v_convert_bf16_to_f32_all_b(in_value_2_bf16_av.v1);
                 in_value_2_float_1 = v_convert_bf16_to_f32_all_b(in_value_2_bf16_av.v2);
                 //application of scale and bias
-                in_value_2_float_0.v1 = v_f32_mac_b(in_value_2_float_0.v1, scale_2_v, neg_scale_x_bias_2_v, (e_no_negation) << 1);
-                in_value_2_float_1.v1 = v_f32_mac_b(in_value_2_float_1.v1, scale_2_v, neg_scale_x_bias_2_v, (e_no_negation) << 1);
+                in_value_2_float_0.v1 = v_f32_mac_b(in_value_2_float_0.v1, scale_2_v, neg_scale_x_bias_2_v, e_no_negation << 1);
+                in_value_2_float_1.v1 = v_f32_mac_b(in_value_2_float_1.v1, scale_2_v, neg_scale_x_bias_2_v, e_no_negation << 1);
 
                 //next index coordinate
                 idx_coord_1[0]++;
@@ -217,10 +217,10 @@ void main(tensor input_tensor,
                 in_value_1_bf16_av = cast_bf16_to_32bits_lin_order(in_value_1);
                 in_value_2_bf16_av = cast_bf16_to_32bits_lin_order(in_value_2);
                 //accumulating
-                out_value_1.v1 = v_f32_add_b(out_value_1.v1, in_value_1_float_0.v1, 0, out_value_1.v1, pred_1, 0);
-                out_value_1.v2 = v_f32_add_b(out_value_1.v2, in_value_1_float_1.v1, 0, out_value_1.v2, pred_1, 0);
-                out_value_2.v1 = v_f32_add_b(out_value_2.v1, in_value_2_float_0.v1, 0, out_value_2.v1, pred_2, 0);
-                out_value_2.v2 = v_f32_add_b(out_value_2.v2, in_value_2_float_1.v1, 0, out_value_2.v2, pred_2, 0);
+                out_value_1.v1 = v_f32_add_b(out_value_1.v1, in_value_1_float_0.v1, 0, out_value_1.v1, pred_1);
+                out_value_1.v2 = v_f32_add_b(out_value_1.v2, in_value_1_float_1.v1, 0, out_value_1.v2, pred_1);
+                out_value_2.v1 = v_f32_add_b(out_value_2.v1, in_value_2_float_0.v1, 0, out_value_2.v1, pred_2);
+                out_value_2.v2 = v_f32_add_b(out_value_2.v2, in_value_2_float_1.v1, 0, out_value_2.v2, pred_2);
 
                 //scale is loaded from input tensor in the embedded version
                 //loading the vector containing the scale and the zp
@@ -270,18 +270,18 @@ void main(tensor input_tensor,
 
             in_value_1_float_0 = v_convert_bf16_to_f32_all_b(in_value_1_bf16_av.v1);
             in_value_1_float_1 = v_convert_bf16_to_f32_all_b(in_value_1_bf16_av.v2);
-            in_value_1_float_0.v1 = v_f32_mac_b(in_value_1_float_0.v1, scale_1_v, neg_scale_x_bias_1_v, (e_no_negation) << 1);
-            in_value_1_float_1.v1 = v_f32_mac_b(in_value_1_float_1.v1, scale_1_v, neg_scale_x_bias_1_v, (e_no_negation) << 1);
+            in_value_1_float_0.v1 = v_f32_mac_b(in_value_1_float_0.v1, scale_1_v, neg_scale_x_bias_1_v, e_no_negation << 1);
+            in_value_1_float_1.v1 = v_f32_mac_b(in_value_1_float_1.v1, scale_1_v, neg_scale_x_bias_1_v, e_no_negation << 1);
 
             in_value_2_float_0 = v_convert_bf16_to_f32_all_b(in_value_2_bf16_av.v1);
             in_value_2_float_1 = v_convert_bf16_to_f32_all_b(in_value_2_bf16_av.v2);
-            in_value_2_float_0.v1 = v_f32_mac_b(in_value_2_float_0.v1, scale_2_v, neg_scale_x_bias_2_v, (e_no_negation) << 1);
-            in_value_2_float_1.v1 = v_f32_mac_b(in_value_2_float_1.v1, scale_2_v, neg_scale_x_bias_2_v, (e_no_negation) << 1);
+            in_value_2_float_0.v1 = v_f32_mac_b(in_value_2_float_0.v1, scale_2_v, neg_scale_x_bias_2_v, e_no_negation << 1);
+            in_value_2_float_1.v1 = v_f32_mac_b(in_value_2_float_1.v1, scale_2_v, neg_scale_x_bias_2_v, e_no_negation << 1);
 
-            out_value_1.v1 = v_f32_add_b(out_value_1.v1, in_value_1_float_0.v1, 0, out_value_1.v1, pred_1, 0);
-            out_value_1.v2 = v_f32_add_b(out_value_1.v2, in_value_1_float_1.v1, 0, out_value_1.v2, pred_1, 0);
-            out_value_2.v1 = v_f32_add_b(out_value_2.v1, in_value_2_float_0.v1, 0, out_value_2.v1, pred_2, 0);
-            out_value_2.v2 = v_f32_add_b(out_value_2.v2, in_value_2_float_1.v1, 0, out_value_2.v2, pred_2, 0);
+            out_value_1.v1 = v_f32_add_b(out_value_1.v1, in_value_1_float_0.v1, 0, out_value_1.v1, pred_1);
+            out_value_1.v2 = v_f32_add_b(out_value_1.v2, in_value_1_float_1.v1, 0, out_value_1.v2, pred_1);
+            out_value_2.v1 = v_f32_add_b(out_value_2.v1, in_value_2_float_0.v1, 0, out_value_2.v1, pred_2);
+            out_value_2.v2 = v_f32_add_b(out_value_2.v2, in_value_2_float_1.v1, 0, out_value_2.v2, pred_2);
             //epilogue ends here
 
             //for next iteration, offset is calculated from the last segment of the current iteration

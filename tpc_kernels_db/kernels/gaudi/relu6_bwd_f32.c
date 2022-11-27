@@ -6,3 +6,4 @@
  */
 #define FLOAT32
 #include "relu6_bwd.h"
+#undef FLOAT32

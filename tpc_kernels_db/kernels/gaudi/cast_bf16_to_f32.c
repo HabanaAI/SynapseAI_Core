@@ -72,10 +72,10 @@ void main(tensor ifm,
                     // Note: bfloat128 vector contains 4 dual groups and each dual group has 32 elements
                     // Unpacks lower half of first group of all 4 dual gorups
                     // 0..15, 32..47, 64..79, 96..111
-                    y.v1 = v_bf16_unpack_b(in, ((e_group_0) << 8) | ((e_every_second_element) << 9) | ((e_lower_half_group) << 10), y.v1);
+                    y.v1 = v_bf16_unpack_b(in, e_group_0 << 8 | e_every_second_element << 9 | e_lower_half_group << 10, y.v1);
                     // Unpacks lower half of second group of all 4 dual gorups
                     // 16..31, 48..63, 80..95, 112..127
-                    y.v2 = v_bf16_unpack_b(in, ((e_group_1) << 8) | ((e_every_second_element) << 9) | ((e_lower_half_group) << 10), y.v2);
+                    y.v2 = v_bf16_unpack_b(in, e_group_1 << 8 | e_every_second_element << 9 | e_lower_half_group << 10, y.v2);
 
                     tmp = y.v1;
                     // Rearranges the vector in correct order

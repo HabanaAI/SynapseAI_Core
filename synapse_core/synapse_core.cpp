@@ -7,6 +7,7 @@
 
 #include <sstream>
 #include "synapse_api.h"
+#include "synapse_common_types.h"
 #include "synapse_state.h"
 #include "graph.h"
 #include "tensor.h"
@@ -302,15 +303,23 @@ synStatus SYN_API_CALL synDeviceGetCount( uint32_t* pCount )
 synStatus SYN_API_CALL synDeviceGetCountByDeviceType( uint32_t*              pCount,
                                                       const synDeviceType    deviceType )
 {
-    if ((deviceType != synDeviceGaudi)) return synInvalidArgument;
-    return synDeviceGetCount(pCount);
+    switch(deviceType)
+    {
+        case synDeviceGaudi:
+        case synDeviceGaudi2:
+            return synDeviceGetCount(pCount);
+        default:
+            return synInvalidArgument;
+    }
 }
 
 synStatus SYN_API_CALL synDeviceAcquireByDeviceType( synDeviceId*            pDeviceId,
                                                      const synDeviceType     deviceType)
 {
-    if ((deviceType != synDeviceGaudi)) return synInvalidArgument;
-    return synDeviceAcquire(pDeviceId, "");
+    bool ret = g_state.OpenDevice("", deviceType);
+    if (!ret) return synFail;
+    *pDeviceId = 0;
+    return synSuccess;
 }
 
 synStatus SYN_API_CALL synDeviceAcquireByModuleId( synDeviceId*      pDeviceId,
@@ -323,10 +332,7 @@ synStatus SYN_API_CALL synDeviceAcquire( synDeviceId*   pDeviceId,
                                          const char*    pciBus )
 {
     if (pDeviceId == nullptr) return synInvalidArgument;
-    bool ret = g_state.OpenDevice(pciBus);
-    if (!ret) return synFail;
-    *pDeviceId = 0;
-    return synSuccess;
+    return synUnsupported;
 }
 
 synStatus SYN_API_CALL synDeviceSynchronize( const synDeviceId     deviceId )
@@ -358,12 +364,23 @@ synStatus SYN_API_CALL synDeviceGetName( char*               pName,
                                          const synDeviceId   deviceId )
 {
     static const char s_gaudiDeviceName[] = "Gaudi";
+    static const char s_gaudi2DeviceName[] = "Gaudi2";
 
     if (deviceId != 0) return synInvalidArgument;
     if (pName == nullptr) return synInvalidArgument;
     if (len < sizeof(s_gaudiDeviceName)) return synInvalidArgument;
 
-    memcpy(pName, s_gaudiDeviceName, sizeof(s_gaudiDeviceName));
+    switch(g_state.getCurrentDeviceType())
+    {
+        case synDeviceGaudi:
+            memcpy(pName, s_gaudiDeviceName, sizeof(s_gaudiDeviceName));
+            break;
+        case synDeviceGaudi2:
+            memcpy(pName, s_gaudi2DeviceName, sizeof(s_gaudiDeviceName));
+            break;
+        default:
+            return synInvalidArgument;
+    }
     return synSuccess;
 }
 
@@ -528,8 +545,8 @@ synStatus SYN_API_CALL synGraphCompile( synRecipeHandle*                pRecipeH
     Graph* g = (Graph*)graphHandle;
     if (g == nullptr) return synInvalidArgument;
 
-    Recipe* r = new Recipe();
-    r->Compile(g, g_state.GetKernelDB());
+    Recipe* r = new Recipe(g->getDeviceType());
+    r->Compile(g, g_state.GetKernelDB(g->getDeviceType()));
     *pRecipeHandle = (synRecipeHandle)r;
     return synSuccess;
 }
@@ -544,7 +561,8 @@ synStatus SYN_API_CALL synGraphCreate( synGraphHandle*        pGraphHandle,
     switch (deviceType)
     {
         case synDeviceGaudi:
-            g = new Graph();
+        case synDeviceGaudi2:
+            g = new Graph(deviceType);
             *pGraphHandle = (synGraphHandle)g;
             return synSuccess;
 
@@ -768,7 +786,7 @@ synStatus SYN_API_CALL synDeviceGetAttribute( uint64_t*                 retVal,
             break;
 
         default:
-            return synDeviceTypeGetAttribute(retVal, deviceAttr, querySize, synDeviceGaudi);
+            return synDeviceTypeGetAttribute(retVal, deviceAttr, querySize, g_state.getCurrentDeviceType());
     }
     return synSuccess;
 }
@@ -779,7 +797,7 @@ synStatus SYN_API_CALL synDeviceTypeGetAttribute( uint64_t*                 retV
                                                   const synDeviceType       deviceType)
 {
     if (deviceAttr == nullptr) return synInvalidArgument;
-    if (deviceType != synDeviceGaudi) return synInvalidArgument;
+    if (deviceType != g_state.getCurrentDeviceType()) return synInvalidArgument;
     if (querySize < sizeof(uint64_t)) return synInvalidArgument;
 
     hlthunk_hw_ip_info info;

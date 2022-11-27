@@ -8,6 +8,7 @@
 #ifndef _MEMORY_ALLOCATOR_H_
 #define _MEMORY_ALLOCATOR_H_
 
+#include "driver_device.h"
 #include <cstdint>
 #include <memory>
 
@@ -16,7 +17,7 @@ class SynMemoryAllocator
 public:
     SynMemoryAllocator() {}
     virtual ~SynMemoryAllocator() {}
-    virtual void Init(uint64_t memorySize, uint64_t base = 0) = 0;
+    virtual void Init(DriverDevice* device, bool mmuEnabled, uint64_t memorySize, uint64_t base = 0) = 0;
     virtual uint64_t Allocate(uint64_t size, uint64_t alignment, uint64_t offset = 0) = 0;
     virtual void Free(uint64_t ptr) = 0;
     virtual uint64_t GetMemorySize() const = 0;
@@ -30,7 +31,7 @@ class MemoryAllocatorBase : public SynMemoryAllocator
 public:
     MemoryAllocatorBase(const std::string& name);
     virtual ~MemoryAllocatorBase() {}
-    virtual void Init(uint64_t memorySize, uint64_t base = 0) override;
+    virtual void Init(DriverDevice* device, bool mmuEnabled, uint64_t memorySize, uint64_t base = 0) override;
     virtual uint64_t Allocate(uint64_t size, uint64_t alignment, uint64_t offset = 0) = 0;
     virtual void Free(uint64_t ptr) override = 0;
 
@@ -40,7 +41,8 @@ public:
 protected:
     uint64_t            m_base;
     uint64_t            m_memorySize;
-
+    DriverDevice*       m_device = nullptr;
+    bool                m_mmuEnabled = false;
     const std::string   m_name;
 };
 

@@ -6,57 +6,15 @@
  */
 
 #include <iostream>
-#include <synapse_api.h>
+#include "test_infra.h"
 
-float get_rand_between(float min, float max)
-{
-    float ret =  (float)(std::rand() / (float)RAND_MAX); //[0, 1]
-    ret = ret * (max - min); //[0, Max+min]
-    return ret - min; //[min, max];
-}
-
-
-void init_input_and_ref(float* a, float* b, float* ref, unsigned size)
-{
-    srand(2021);
-    for (unsigned i = 0; i < size; ++i)
-    {
-        a[i]   = get_rand_between(-5.f, 5.f);
-        b[i]   = get_rand_between(-5.f, 5.f);
-        ref[i] = a[i] / b[i];
-    }
-}
-
-void validate_output(float* output, float* ref)
-{
-    bool error = false;
-    const float eps = 1e-6;
-    float* pOutput = output;
-    float* pRef = ref;
-    for (unsigned b = 0; b < 1; ++b)
-    {
-        for (unsigned h = 0; h < 3; ++h)
-        {
-            for (unsigned w = 0; w < 3; ++w)
-            {
-                for (unsigned c = 0; c < 2; ++c)
-                {
-                    if (std::abs(*pOutput - *pRef) > eps)
-                    {
-                        std::cout << "Error at [" << c << "," << w << "," << h << "," << b << "]: Output:" << *pOutput
-                                  << " Ref: " << *pRef << std::endl;
-                        error = true;
-                    }
-                    ++pOutput;
-                    ++pRef;
-                }
-            }
-        }
-    }
-    if (!error)
-    {
-        std::cout << "Comparison passed successfully" << std::endl;
-    }
+void init_input_and_ref(float* a, float* b, float* ref, unsigned size) {
+  srand(2021);
+  for (unsigned i = 0; i < size; ++i) {
+    a[i] = HabanaTest::get_rand_between(-5.f, 5.f);
+    b[i] = HabanaTest::get_rand_between(-5.f, 5.f);
+    ref[i] = a[i] / b[i];
+  }
 }
 
 int main(int argc, char* argv[])
@@ -72,10 +30,14 @@ int main(int argc, char* argv[])
         return -1;
     }
 
+    HabanaTest::TestArguments args = HabanaTest::parseArguments(argc, argv);
+
+    const synDeviceType deviceType = args.deviceType;
+
     //// Model definition
 
     synGraphHandle graph;
-    status = synGraphCreate(&graph, synDeviceGaudi);
+    status = synGraphCreate(&graph, deviceType);
     if (status != synSuccess)
     {
         std::cout << "Failed to create graph" << std::endl;
@@ -160,7 +122,7 @@ int main(int argc, char* argv[])
     //// Execution
 
     synDeviceId devId;
-    status = synDeviceAcquireByDeviceType(&devId, synDeviceGaudi);
+    status = synDeviceAcquireByDeviceType(&devId, deviceType);
     if (status != synSuccess)
     {
         std::cout << "No available Gaudi devices!" << std::endl;
@@ -350,7 +312,7 @@ int main(int argc, char* argv[])
     }
 
     //Check results
-    validate_output(output, ref);
+    HabanaTest::validate_output(output, ref);
 
     synRecipeDestroy(recipe);
     synGraphDestroy(graph);

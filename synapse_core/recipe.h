@@ -10,14 +10,17 @@
 #include <vector>
 #include <gc_interface.h>
 #include "graph.h"
+#include "hw_abstraction_layer.h"
 #include "node.h"
 #include "kernel_db.h"
 #include "index_space.h"
 
+gcapi::DeviceId_t deviceIdfromDeviceType(synDeviceType deviceType);
+
 class Recipe
 {
 public:
-    Recipe();
+    Recipe(const synDeviceType deviceType);
     ~Recipe();
 
     void Compile(Graph* g, KernelDB* db);
@@ -37,7 +40,7 @@ public:
     void*    GetAuxHostPtr(unsigned idx);
 
 protected:
-    void SetKernelParams();
+    void SetKernelParams(synDeviceType deviceType);
 
     void SetTensor(gcapi::Tensor_t* gTensor, Tensor* tensor);
 
@@ -45,23 +48,24 @@ protected:
     void AllocateELFBuffer();
 
     void PartitionIndexSpace();
-
+    std::shared_ptr<HWAbstractionLayer> GetHal() {return m_hal;}
     typedef std::pair<void*, unsigned> AuxTensorData;
 
 private:
     std::vector<Tensor*> m_tensors;
     std::string          m_guid;
-    char*                m_params;
-    unsigned             m_paramSize;
-    unsigned             m_numInputs;
-    unsigned             m_numAuxTensors;
-    unsigned             m_firstAux;
-    char*                m_auxBuffer;
-    char*                m_elfBuffer;
+    char*                m_params = nullptr;
+    unsigned             m_paramSize = 0;
+    unsigned             m_numInputs = 0;
+    unsigned             m_numAuxTensors = 0;
+    unsigned             m_firstAux = 0;
+    char*                m_auxBuffer = nullptr;
+    char*                m_elfBuffer = nullptr;
 
-    std::vector<AuxTensorData>         m_auxTensorData;
-    std::vector<IndexSpace>            m_indexSpacePartition;
-
-    gcapi::HabanaKernelParams_t        m_kernelParams;
-    gcapi::HabanaKernelInstantiation_t m_kernelInstance;
+    std::vector<AuxTensorData>          m_auxTensorData;
+    std::vector<IndexSpace>             m_indexSpacePartition;
+ 
+    gcapi::HabanaKernelParams_t         m_kernelParams = {0};
+    gcapi::HabanaKernelInstantiation_t  m_kernelInstance = {{0}};
+    std::shared_ptr<HWAbstractionLayer> m_hal = nullptr;
 };

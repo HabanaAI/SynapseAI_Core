@@ -15,6 +15,8 @@
 
 #pragma pack(push, 4)
 
+namespace gaudi
+{
 struct GaudiTpcDesc
 {
     static const int c_max_tensor_dims = 5;
@@ -25,5 +27,6 @@ struct GaudiTpcDesc
     block_tpc_non_tensor_descriptor m_desc;
 };
 
+} // namespace gaudi
 #pragma pack(pop)
 #endif // _GAUDI_TPC_DESC_H_

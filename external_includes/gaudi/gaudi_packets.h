@@ -12,6 +12,8 @@
 
 #define PACKET_HEADER_PACKET_ID_SHIFT		56
 #define PACKET_HEADER_PACKET_ID_MASK		0x1F00000000000000ull
+namespace gaudi
+{
 
 enum packet_id {
 	PACKET_WREG_32 = 0x1,
@@ -325,4 +327,5 @@ struct packet_cp_dma {
 	__u64 src_addr;
 };
 
+} // namespace gaudi
 #endif /* GAUDI_PACKETS_H */

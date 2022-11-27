@@ -10,8 +10,8 @@
 #include "filter_fwd_2d_bf16.hpp"
 
 
-extern unsigned char _binary___filter_fwd_2d_bf16_o_start;
-extern unsigned char _binary___filter_fwd_2d_bf16_o_end;
+extern unsigned char _kernels_gaudi_binary___filter_fwd_2d_bf16_o_start;
+extern unsigned char _kernels_gaudi_binary___filter_fwd_2d_bf16_o_end;
 
  gcapi::GlueCodeReturn_t FilterFwd2dBF16::GetKernelName(
              char kernelName [gcapi::MAX_NODE_NAME])
@@ -111,7 +111,7 @@ gcapi::GlueCodeReturn_t FilterFwd2dBF16::GetGcDefinitions(
     /*************************************************************************************
     *    Stage V -  Load ISA into the descriptor.
     **************************************************************************************/
-    unsigned IsaSize = (&_binary___filter_fwd_2d_bf16_o_end - &_binary___filter_fwd_2d_bf16_o_start);
+    unsigned IsaSize = (&_kernels_gaudi_binary___filter_fwd_2d_bf16_o_end - &_kernels_gaudi_binary___filter_fwd_2d_bf16_o_start);
     unsigned givenBinarySize = out_defs->elfSize;
     out_defs->elfSize = IsaSize;
 
@@ -119,7 +119,7 @@ gcapi::GlueCodeReturn_t FilterFwd2dBF16::GetGcDefinitions(
     {
         // copy binary out
         memcpy (out_defs->kernelElf,
-                &_binary___filter_fwd_2d_bf16_o_start,
+                &_kernels_gaudi_binary___filter_fwd_2d_bf16_o_start,
                 IsaSize);
     }
     else

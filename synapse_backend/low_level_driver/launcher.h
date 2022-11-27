@@ -96,19 +96,27 @@ public:
         DeviceMemory_t memSpace);
 
 private:
-    static void GetProgBuffSizeAndOffsets(
-        Device *device,
-        const std::list<Device::QueueWkld> *programs,
-        std::list<unsigned> *offsets,
-        unsigned *size);
-    static void PrepareProgBuff(
-        Device *device,
-        const unsigned stream,
-        const uint64_t deviceAddr,
-        const std::list<Device::QueueWkld> *programs,
-        const std::list<unsigned> *offsets,
-        const unsigned bufferSize,
-        std::list<Device::QueueWkld> *devicePrograms,
-        void *progBuff);
+  static void ResetSoObjsInDevice(Device *device, const SyncInfo* syncInfo,
+                                  unsigned stream);
+  static void
+  GetProgBuffSizeAndOffsets(Device *device,
+                            const std::list<Device::QueueWkld> *programs,
+                            std::list<unsigned> *offsets, unsigned *size);
+  static void PrepareProgBuff(Device *device, const unsigned stream,
+                              const uint64_t deviceAddr,
+                              const std::list<Device::QueueWkld> *programs,
+                              const std::list<unsigned> *offsets,
+                              const unsigned bufferSize,
+                              std::list<Device::QueueWkld> *devicePrograms,
+                              void *progBuff);
+  static void addMonitorForNode(Device* device,
+                                unsigned stream,
+                                const SyncInfo* syncInfo,
+                                uint32_t outMonitorIdx,
+                                uint64_t fenceAddr,
+                                uint8_t** CBPtr,
+                                CPProgram* prog,
+                                bool addFence);
+
 
 };

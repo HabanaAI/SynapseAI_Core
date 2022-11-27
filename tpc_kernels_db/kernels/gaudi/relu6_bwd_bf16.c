@@ -6,3 +6,4 @@
  */
 #define BFLOAT16
 #include "relu6_bwd.h"
+#undef BFLOAT16

@@ -6,6 +6,7 @@
  */
 
 #pragma once
+#include <cstdlib>
 #include <string.h>
 #include <stdint.h>
 #include <memory>
@@ -18,8 +19,8 @@ namespace CPCommand
     class Command
     {
     public:
-        Command(bool mb = true, bool rb = true, bool eb = true)
-            : m_mb(mb), m_rb(rb), m_eb(eb) {}
+        Command(bool mb = true, bool eb = true)
+            : m_mb(mb),  m_eb(eb) {}
 
         virtual ~Command() {}
 
@@ -28,7 +29,6 @@ namespace CPCommand
         virtual Command *Clone() const = 0;
 
         bool m_mb;
-        bool m_rb;
         bool m_eb;
     };
 
@@ -36,7 +36,7 @@ namespace CPCommand
     class Nop : public Command
     {
     public:
-        Nop(bool mb = true, bool rb = true, bool eb = true) : Command(mb, rb, eb) {};
+        Nop(bool mb = true, bool eb = true) : Command(mb, eb) {};
 
         virtual unsigned GetSize() const = 0;
         virtual void Serialize(void **buff) const = 0;
@@ -60,8 +60,8 @@ namespace CPCommand
         uint32_t m_value;
         uint8_t m_pred;
 
-        WReg32(uint16_t offset, uint32_t value, bool mb = true, bool rb = true, bool eb = true) :
-            Command(mb, rb, eb), m_offset(offset), m_value(value), m_pred(0) {};
+        WReg32(uint16_t offset, uint32_t value, bool mb = true, bool eb = true) :
+            Command(mb, eb), m_offset(offset), m_value(value), m_pred(0) {};
         WReg32() : WReg32(0, 0) {};
 
         virtual unsigned GetSize() const = 0;
@@ -79,15 +79,12 @@ namespace CPCommand
 
         WRegBulk() : Command(), m_offset(0), m_values(0), m_pred(0), m_numValues(0), m_freeValues(0) {};
 
-        WRegBulk(uint16_t offset, uint64_t *values, unsigned numValues) :
+        WRegBulk(uint16_t offset, uint64_t* values, unsigned numValues) :
             Command(), m_offset(offset), m_pred(0), m_numValues(numValues), m_freeValues(1)
         {
             m_values = (uint64_t*)malloc(m_numValues * sizeof(uint64_t));
             memcpy(m_values, values, m_numValues * sizeof(uint64_t));
         }
-
-        WRegBulk(uint16_t offset, uint32_t *values, unsigned numValues) :
-            WRegBulk(offset, (uint64_t*)values, numValues / 2) {}
 
         WRegBulk(uint16_t offset, std::list<uint32_t>::const_iterator &begin, std::list<uint32_t>::const_iterator &end) :
             Command(), m_offset(offset), m_pred(0),m_numValues(0), m_freeValues(1)
@@ -116,7 +113,7 @@ namespace CPCommand
         }
 
         WRegBulk(const WRegBulk &other) :
-            Command(other.m_mb, other.m_rb, other.m_eb), m_offset(other.m_offset),
+            Command(other.m_mb, other.m_eb), m_offset(other.m_offset),
             m_pred(other.m_pred),m_numValues(other.m_numValues),  m_freeValues(1)
         {
             m_values = (uint64_t*)malloc(m_numValues * sizeof(uint64_t));
@@ -147,8 +144,8 @@ namespace CPCommand
         bool m_weaklyOrdered;
 
 
-        MsgLong(uint64_t addr, uint32_t value, bool mb = true, bool rb = true, bool eb = true) :
-            Command(mb, rb, eb), m_addr(addr), m_value(value), m_pred(0),
+        MsgLong(uint64_t addr, uint32_t value, bool mb = true, bool eb = true) :
+            Command(mb, eb), m_addr(addr), m_value(value), m_pred(0),
             m_op(0), m_noSnoop(0), m_weaklyOrdered(0) {}
 
         MsgLong() : MsgLong(0, 0) {}
@@ -190,8 +187,8 @@ namespace CPCommand
         bool m_noSnoop;
         bool m_weaklyOrdered;
 
-        MsgProt(uint64_t addr, uint32_t value, bool mb = true, bool rb = true, bool eb = true) :
-            Command(mb, rb, eb), m_addr(addr), m_value(value), m_pred(0),
+        MsgProt(uint64_t addr, uint32_t value, bool mb = true, bool eb = true) :
+            Command(mb, eb), m_addr(addr), m_value(value), m_pred(0),
             m_op(0), m_noSnoop(0), m_weaklyOrdered(0) {}
 
         MsgProt() : MsgProt(0, 0) {}
@@ -209,8 +206,8 @@ namespace CPCommand
         unsigned m_id;
         uint8_t m_pred;
 
-        Fence(unsigned id, uint8_t targetVal, unsigned decVal, bool mb = true, bool rb = true, bool eb = true)
-            : Command(mb, rb, eb), m_decVal(decVal), m_targetVal(targetVal), m_id(id), m_pred(0) {}
+        Fence(unsigned id, uint8_t targetVal, unsigned decVal, bool mb = true, bool eb = true)
+            : Command(mb, eb), m_decVal(decVal), m_targetVal(targetVal), m_id(id), m_pred(0) {}
 
         Fence() : Fence(0, 0, 0) {}
 

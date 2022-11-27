@@ -9,7 +9,8 @@
 #include <stdint.h>
 
 #pragma pack(push, 1)
-
+namespace gaudi
+{
 namespace tpc {
 /*
  CFG_BASE_ADDRESS_HIGH 
@@ -705,13 +706,15 @@ struct reg_irq_occoupy_cntr {
 };
 static_assert((sizeof(struct reg_irq_occoupy_cntr) == 4), "reg_irq_occoupy_cntr size is not 32-bit");
 } /* tpc namespace */
-
+} //namespace gaudi
 #include "sync_object_regs.h"
 #include "tpc_non_tensor_descriptor_regs.h"
 #include "tpc_tensor_regs.h"
 /*
  TPC block
 */
+namespace gaudi
+{
 struct block_tpc {
 	uint32_t _pad0[256];
 	struct block_tpc_tensor kernel_tensor_0;
@@ -807,7 +810,10 @@ struct block_tpc {
 	struct block_sync_object qm_sync_object;
 	struct block_tpc_non_tensor_descriptor qm;
 };
+} // namespace gaudi
 #include "gaudi_types.h"
+namespace gaudi
+{
 const offsetVal block_tpc_defaults[]
 {
 	// offset	// value
@@ -863,6 +869,6 @@ const offsetVal block_tpc_defaults[]
 	{ 0xd54 , 0x50000             , 1 }, // tensor_config
 	{ 0xdb8 , 0x60882             , 1 }, // kernel_config
 };
-
+} // namespace gaudi
 #pragma pack(pop)
 #endif /* ASIC_REG_STRUCTS_TPC_H_ */

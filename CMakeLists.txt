@@ -7,6 +7,7 @@ project(synapse_core)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Werror -Wno-sign-compare -fno-strict-aliasing")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pipe")
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 8.0)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-attributes")
